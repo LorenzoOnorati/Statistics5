@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exercise 1: Welford Online Streaming Lab</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- KaTeX for high-clarity LaTeX math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Google Fonts: Inter & Fira Code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    code, pre, .font-mono {
+      font-family: 'Fira Code', monospace;
+    }
+    .katex {
+      font-size: 1.05em !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+          W1
+        </div>
+        <div>
+          <h1 class="text-base font-bold text-slate-900 leading-tight">Exercise 1 • Welford Algorithm Simulation Lab</h1>
+          <p class="text-xs text-slate-500 font-medium">Online Cyber Penetration Stream • Knuth Mean & Welford SS Recurrences</p>
+        </div>
+      </div>
+
+      <!-- VIEW TOGGLE -->
+      <nav class="flex space-x-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs sm:text-sm font-medium">
+        <button id="nav-btn-sim" onclick="switchView('sim')" class="px-3.5 py-1.5 rounded-md transition-colors bg-white text-indigo-700 shadow-sm font-semibold">
+          Simulation View
+        </button>
+        <button id="nav-btn-math" onclick="switchView('math')" class="px-3.5 py-1.5 rounded-md transition-colors text-slate-600 hover:text-slate-900">
+          Algebraic Derivations
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 1: INTERACTIVE SIMULATION                                        -->
+    <!-- ===================================================================== -->
+    <div id="view-sim" class="space-y-6">
+      
+      <!-- CONTROLS & WELFORD CARD ROW -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Controls Panel (8 cols) -->
+        <div class="lg:col-span-8 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between pb-3 border-b border-slate-100 gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Stream Parameters
+            </h2>
+            <div class="flex items-center gap-2 text-xs">
+              <label for="rng-seed" class="font-medium text-slate-500">Seed:</label>
+              <input type="number" id="rng-seed" value="42" onchange="onSeedChange(this.value)" class="w-24 px-2 py-1 bg-slate-50 border border-slate-200 rounded font-mono text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+              <button onclick="randomizeSeed()" title="Randomize PRNG Seed" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded text-slate-600 transition">↻</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Distribution selector -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Score Distribution ($0..10$)</label>
+              <select id="dist-select" onchange="onDistributionChange()" class="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <option value="binomial_sym">Symmetric Binomial Bin(10, 0.5) [μ=5.0, σ²=2.5]</option>
+                <option value="binomial_skew">Skewed Binomial Bin(10, 0.7) [μ=7.0, σ²=2.1]</option>
+                <option value="discrete_uniform">Discrete Uniform {0..10} [μ=5.0, σ²=10.0]</option>
+                <option value="bimodal">Bimodal Mixture [μ=5.0, σ²=17.5]</option>
+              </select>
+            </div>
+
+            <!-- Hackers slider -->
+            <div>
+              <div class="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+                <span>Hackers ($m$):</span>
+                <span id="label-m" class="font-mono text-indigo-600 font-bold">100</span>
+              </div>
+              <input type="range" id="slider-m" min="10" max="350" step="10" value="100" oninput="updateControlLabels()" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+              <div class="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                <span>10</span>
+                <span>350</span>
+              </div>
+            </div>
+
+            <!-- Systems slider -->
+            <div>
+              <div class="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+                <span>Systems ($n$):</span>
+                <span id="label-n" class="font-mono text-indigo-600 font-bold">120</span>
+              </div>
+              <input type="range" id="slider-n" min="10" max="250" step="5" value="120" oninput="updateControlLabels()" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+              <div class="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                <span>10</span>
+                <span>250</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-wrap items-center justify-between pt-2 gap-3">
+            <div class="flex items-center space-x-2">
+              <button id="btn-run" onclick="runSimulation()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+                <span>▶ Run Batch Simulation</span>
+              </button>
+              <button id="btn-anim" onclick="toggleProgressiveAnimation()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 transition flex items-center gap-1.5">
+                <span id="anim-indicator" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <span id="anim-btn-text">Progressive Streaming</span>
+              </button>
+              <button onclick="resetSimulationToBlank()" class="px-3 py-2 bg-white hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-semibold border border-slate-200 transition">
+                Reset
+              </button>
+            </div>
+            <div id="sim-status" class="text-xs text-slate-500 font-medium">
+              Simulation ready • Deterministic PRNG active
+            </div>
+          </div>
+        </div>
+
+        <!-- Welford Formula Reference Card (4 cols) -->
+        <div class="lg:col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Welford & Knuth Online Recurrence</h2>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-100">$\mathcal{O}(1)$ Space</span>
+            </div>
+            <div class="mt-3 text-xs text-slate-600 space-y-1">
+              <p>For score $x_k$ at system $k=1 \dots n$:</p>
+              <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px] font-mono text-slate-800 leading-relaxed">
+                <span class="text-slate-400">// 1. Difference from old mean</span><br>
+                <span class="text-indigo-600 font-bold">delta</span> = x - mean;<br>
+                <span class="text-slate-400">// 2. Knuth mean recurrence</span><br>
+                <span class="text-indigo-600 font-bold">mean</span> += delta / k;<br>
+                <span class="text-slate-400">// 3. Welford SS recurrence</span><br>
+                <span class="text-indigo-600 font-bold">M2</span> += delta * (x - mean);<br>
+                <span class="text-slate-400">// Bessel unbiased variance (k &ge; 2)</span><br>
+                <span class="text-emerald-600 font-bold">s2</span> = (k &gt; 1) ? M2 / (k - 1) : NaN;
+              </div>
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-2 italic">
+            *Avoids catastrophic cancellation. For $k=1$, Bessel variance is mathematically undefined ($0/0 \implies \mathrm{NaN}$).
+          </p>
+        </div>
+      </div>
+
+      <!-- METRICS SUMMARY BAR -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- Mean Comparison -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Population Mean $\mu$</div>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="metric-theo-mean" class="text-lg font-bold font-mono text-slate-900">-</span>
+            <span class="text-xs text-slate-400">Target</span>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span class="text-slate-500">Average Mean $\bar{\bar{X}}$:</span>
+            <span id="metric-emp-mean" class="font-mono font-bold text-indigo-600">-</span>
+          </div>
+        </div>
+
+        <!-- Variance Comparison -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Population Variance $\sigma^2$</div>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="metric-theo-var" class="text-lg font-bold font-mono text-slate-900">-</span>
+            <span class="text-xs text-slate-400">Target</span>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span class="text-slate-500">Average $\overline{S^2}$:</span>
+            <span id="metric-emp-var" class="font-mono font-bold text-emerald-600">-</span>
+          </div>
+        </div>
+
+        <!-- Standard Error of the Mean -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Std. Error $\mathrm{SE}(\bar{X}) = \frac{\sigma}{\sqrt{n}}$</div>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="metric-theo-se" class="text-lg font-bold font-mono text-slate-900">-</span>
+            <span class="text-xs text-slate-400">Theoretical</span>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span class="text-slate-500">Empirical $\mathrm{SD}_{\mathrm{emp}}(\bar{X})$:</span>
+            <span id="metric-emp-se" class="font-mono font-bold text-indigo-600">-</span>
+          </div>
+        </div>
+
+        <!-- Empirical Deviation -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Deviations from Target</div>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="metric-bias-mean" class="text-sm font-bold font-mono text-slate-800">-</span>
+            <span class="text-[10px] text-slate-400">$\bar{\bar{X}} - \mu$</span>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span class="text-slate-500">Variance Dev:</span>
+            <span id="metric-bias-var" class="font-mono font-bold text-slate-800">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DUAL CANVAS CHARTS -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Trajectory Chart (8 cols) -->
+        <div class="lg:col-span-8 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex flex-wrap items-center justify-between pb-3 border-b border-slate-100 gap-2">
+            <div>
+              <h3 class="text-sm font-semibold text-slate-800">Online Trajectories over $k = 1 \dots n$ Systems</h3>
+              <p class="text-xs text-slate-500">Evolution of Welford estimators across $m$ hacker penetration streams</p>
+            </div>
+            <!-- View Mode Selector -->
+            <div class="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-medium">
+              <button id="btn-view-mean" onclick="setPlotMode('mean')" class="px-2.5 py-1 rounded bg-white text-indigo-700 shadow-xs font-semibold">
+                Running Mean $\bar{x}_k$
+              </button>
+              <button id="btn-view-var" onclick="setPlotMode('var')" class="px-2.5 py-1 rounded text-slate-600 hover:text-slate-900">
+                Sample Variance $s^2_k$
+              </button>
+            </div>
+          </div>
+
+          <div class="relative w-full flex-1 min-h-[360px] mt-3">
+            <canvas id="chart-trajectories" class="w-full h-full block"></canvas>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100 mt-2 gap-2">
+            <div class="flex items-center gap-4">
+              <span class="flex items-center gap-1.5">
+                <span class="w-3 h-0.5 bg-slate-300 inline-block"></span> Hacker Trajectories ($m$)
+              </span>
+              <span class="flex items-center gap-1.5 font-medium text-indigo-700">
+                <span class="w-3 h-0.5 bg-indigo-600 inline-block"></span> Ensemble Average
+              </span>
+              <span class="flex items-center gap-1.5 font-medium text-rose-600">
+                <span class="w-3 h-0.5 border-t border-dashed border-rose-500 inline-block"></span> Population Target ($\mu$ or $\sigma^2$)
+              </span>
+            </div>
+            <div id="chart-scale-note" class="text-[11px] text-slate-400 font-mono">
+              Y-range: Dynamic unclipped
+            </div>
+          </div>
+        </div>
+
+        <!-- Sampling Distribution Histogram (4 cols) -->
+        <div class="lg:col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <div class="pb-3 border-b border-slate-100">
+            <h3 class="text-sm font-semibold text-slate-800">Sampling Distribution</h3>
+            <p id="hist-subtitle" class="text-xs text-slate-500">Distribution at system $k=n$</p>
+          </div>
+
+          <div class="relative w-full flex-1 min-h-[360px] mt-3">
+            <canvas id="chart-histogram" class="w-full h-full block"></canvas>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 mt-2 text-xs text-slate-500 space-y-1">
+            <div class="flex justify-between">
+              <span>Empirical Std. Dev:</span>
+              <span id="hist-stat-sd" class="font-mono font-semibold text-slate-700">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Theoretical Std. Dev:</span>
+              <span id="hist-stat-target" class="font-mono font-semibold text-slate-700">-</span>
+            </div>
+            <p id="hist-stat-note" class="text-[10px] text-slate-400 pt-1">
+              Binning calibrated via modified Freedman-Diaconis rule.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 2: FORMAL ALGEBRAIC DERIVATIONS                                  -->
+    <!-- ===================================================================== -->
+    <div id="view-math" class="hidden space-y-6">
+      
+      <!-- Knuth Mean Derivation -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-3">
+        <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
+          1. Derivation of Knuth's Recurrence Formula for the Mean
+        </h2>
+        <p class="text-sm text-slate-700 leading-relaxed">
+          Let $\bar{x}_k = \frac{1}{k} \sum_{i=1}^k x_i$ be the sample mean of the first $k$ scores. Isolating the newest observation $x_k$:
+        </p>
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm overflow-x-auto space-y-2">
+          $$\bar{x}_k = \frac{1}{k} \left( \sum_{i=1}^{k-1} x_i + x_k \right) = \frac{1}{k} \left( (k-1)\bar{x}_{k-1} + x_k \right)$$
+          $$\bar{x}_k = \frac{k\bar{x}_{k-1} - \bar{x}_{k-1} + x_k}{k} = \bar{x}_{k-1} + \frac{x_k - \bar{x}_{k-1}}{k}$$
+        </div>
+        <p class="text-sm text-slate-700">
+          Defining the prior-mean error $\delta_k = x_k - \bar{x}_{k-1}$, we obtain Knuth's exact streaming recurrence:
+          $$\bar{x}_k = \bar{x}_{k-1} + \frac{\delta_k}{k}$$
+        </p>
+      </div>
+
+      <!-- Welford SS Derivation -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-3">
+        <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
+          2. Rigorous Algebraic Derivation of Welford's Sum of Squares ($M_{2,k}$)
+        </h2>
+        <p class="text-sm text-slate-700 leading-relaxed">
+          Define $M_{2,k} = \sum_{i=1}^k (x_i - \bar{x}_k)^2$. Separating the summation over the prior $k-1$ elements from the new score $x_k$:
+        </p>
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm overflow-x-auto space-y-3">
+          $$M_{2,k} = \sum_{i=1}^{k-1} (x_i - \bar{x}_k)^2 + (x_k - \bar{x}_k)^2$$
+          <p class="text-xs text-slate-600 font-sans">
+            Write $x_i - \bar{x}_k = (x_i - \bar{x}_{k-1}) + (\bar{x}_{k-1} - \bar{x}_k)$ and expand the squared binomial over $i=1 \dots k-1$:
+          </p>
+          $$\sum_{i=1}^{k-1} (x_i - \bar{x}_k)^2 = \sum_{i=1}^{k-1} (x_i - \bar{x}_{k-1})^2 + 2(\bar{x}_{k-1} - \bar{x}_k) \underbrace{\sum_{i=1}^{k-1}(x_i - \bar{x}_{k-1})}_{= 0 \text{ identically}} + (k-1)(\bar{x}_{k-1} - \bar{x}_k)^2$$
+          $$M_{2,k} = M_{2,k-1} + (k-1)(\bar{x}_{k-1} - \bar{x}_k)^2 + (x_k - \bar{x}_k)^2$$
+          <p class="text-xs text-slate-600 font-sans">
+            Using Knuth's relationship $\bar{x}_{k-1} - \bar{x}_k = -\frac{x_k - \bar{x}_{k-1}}{k} = -\frac{\delta_k}{k}$ and $x_k - \bar{x}_k = \delta_k \left(1 - \frac{1}{k}\right) = \delta_k \frac{k-1}{k}$:
+          </p>
+          $$(k-1)\left(-\frac{\delta_k}{k}\right)^2 + \left(\delta_k \frac{k-1}{k}\right)^2 = \delta_k^2 \frac{k-1}{k^2} (1 + k - 1) = \delta_k^2 \frac{k-1}{k} = \delta_k (x_k - \bar{x}_k)$$
+          $$M_{2,k} = M_{2,k-1} + \delta_k (x_k - \bar{x}_k)$$
+        </div>
+        <p class="text-sm text-slate-700 leading-relaxed">
+          Bessel's unbiased sample variance for any sample size $k \ge 2$ is:
+          $$s_k^2 = \frac{M_{2,k}}{k - 1}$$
+          <strong>Statistical Singularity at $k=1$:</strong> For a single sample, $s_1^2 = \frac{0}{1-1} = \frac{0}{0} = \mathrm{NaN}$. A single sample carries zero degrees of freedom; setting it to zero is statistically invalid as it would deceptively suggest zero variability.
+        </p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+    Exercise 1 • Online Streaming Lab • Knuth Mean Recurrence • Welford $M_2$ Formulation
+  </footer>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    /* =========================================================================
+     * 1. REPRODUCIBLE PRNG (Mulberry32)
+     * ========================================================================= */
+    let currentSeed = 42;
+
+    function setSeed(newSeed) {
+      const numericSeed = Math.max(0, Math.floor(Number(newSeed) || 0)) % 2147483647;
+      currentSeed = numericSeed;
+      const seedInput = document.getElementById('rng-seed');
+      if (seedInput && Number(seedInput.value) !== numericSeed) {
+        seedInput.value = numericSeed;
+      }
+    }
+
+    function createRNG(seed) {
+      let s = seed >>> 0;
+      return function() {
+        let t = (s += 0x6D2B79F5);
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    let rng = createRNG(currentSeed);
+
+    function onSeedChange(val) {
+      setSeed(val);
+      runSimulation();
+    }
+
+    function randomizeSeed() {
+      const seed = Math.floor(Math.random() * 1000000);
+      setSeed(seed);
+      runSimulation();
+    }
+
+    /* =========================================================================
+     * 2. DISTRIBUTIONS WITH CANONICAL FOURTH MOMENTS
+     * ========================================================================= */
+    const DISTRIBUTIONS = {
+      binomial_sym: {
+        name: "Symmetric Binomial Bin(10, 0.5)",
+        theoreticalMean: 5.0,
+        theoreticalVariance: 2.5,
+        centralFourthMoment: 17.5,
+        sampler: function(r) {
+          let c = 0;
+          for (let i = 0; i < 10; i++) if (r() < 0.5) c++;
+          return c;
+        }
+      },
+      binomial_skew: {
+        name: "Skewed Binomial Bin(10, 0.7)",
+        theoreticalMean: 7.0,
+        theoreticalVariance: 2.1,
+        centralFourthMoment: 12.684,
+        sampler: function(r) {
+          let c = 0;
+          for (let i = 0; i < 10; i++) if (r() < 0.7) c++;
+          return c;
+        }
+      },
+      discrete_uniform: {
+        name: "Discrete Uniform {0..10}",
+        theoreticalMean: 5.0,
+        theoreticalVariance: 10.0,
+        centralFourthMoment: 178.0,
+        sampler: function(r) {
+          return Math.floor(r() * 11);
+        }
+      },
+      bimodal: {
+        name: "Bimodal Mixture",
+        theoreticalMean: 5.0,
+        theoreticalVariance: 17.5,
+        centralFourthMoment: 362.5,
+        sampler: function(r) {
+          const isComp2 = r() >= 0.5;
+          const u = r();
+          if (!isComp2) {
+            return u < 0.375 ? 0 : (u < 0.875 ? 1 : 4);
+          } else {
+            return u < 0.125 ? 6 : (u < 0.625 ? 9 : 10);
+          }
+        }
+      }
+    };
+
+    function getExactVarianceOfSampleVariance(dist, n) {
+      if (n <= 1) return NaN;
+      const mu4 = dist.centralFourthMoment;
+      const sigma2 = dist.theoreticalVariance;
+      const sigma4 = sigma2 * sigma2;
+      return (1 / n) * (mu4 - ((n - 3) / (n - 1)) * sigma4);
+    }
+
+    /* =========================================================================
+     * 3. STATE & DATA STRUCTURES
+     * ========================================================================= */
+    let currentDistKey = "binomial_sym";
+    let plotMode = "mean";
+    let isProgressiveStreaming = false;
+    let animFrameId = null;
+
+    let simState = {
+      m: 100,
+      n: 120,
+      currentStep: 0,
+      hackers: [],
+      grandMeans: null,
+      grandVars: null
+    };
+
+    function resetSimulationState(m, n) {
+      simState.m = m;
+      simState.n = n;
+      simState.currentStep = 0;
+      simState.grandMeans = new Float64Array(n + 1);
+      simState.grandVars = new Float64Array(n + 1);
+      
+      simState.hackers = [];
+      for (let j = 0; j < m; j++) {
+        simState.hackers.push({
+          mean: 0,
+          M2: 0,
+          meanHistory: new Float64Array(n + 1),
+          varHistory: new Float64Array(n + 1)
+        });
+      }
+    }
+
+    function resetSimulationToBlank() {
+      stopProgressiveAnimation();
+      const m = parseInt(document.getElementById('slider-m').value, 10);
+      const n = parseInt(document.getElementById('slider-n').value, 10);
+      resetSimulationState(m, n);
+      updateMetricsDashboard();
+      renderAllCharts();
+      document.getElementById('sim-status').textContent = "Simulation reset (k = 0) • Ready to run";
+    }
+
+    /* =========================================================================
+     * 4. SIMULATION ENGINE
+     * ========================================================================= */
+    function stepSimulation() {
+      if (simState.currentStep >= simState.n) return false;
+      
+      const k = ++simState.currentStep;
+      const dist = DISTRIBUTIONS[currentDistKey];
+      let sumMean = 0;
+      let sumVar = 0;
+
+      for (let j = 0; j < simState.m; j++) {
+        const h = simState.hackers[j];
+        const x = dist.sampler(rng);
+
+        /* --- WELFORD'S THREE RECURRENCE LINES --- */
+        const delta = x - h.mean;
+        h.mean += delta / k;
+        h.M2 += delta * (x - h.mean);
+        const s2 = (k > 1) ? (h.M2 / (k - 1)) : NaN;
+
+        h.meanHistory[k] = h.mean;
+        // Strictly store NaN for k=1 to distinguish from zero variance
+        h.varHistory[k] = s2;
+
+        sumMean += h.mean;
+        if (!isNaN(s2)) sumVar += s2;
+      }
+
+      simState.grandMeans[k] = sumMean / simState.m;
+      simState.grandVars[k] = (k > 1) ? (sumVar / simState.m) : NaN;
+      return true;
+    }
+
+    function runSimulation() {
+      stopProgressiveAnimation();
+      
+      const seedInput = parseInt(document.getElementById('rng-seed').value, 10);
+      setSeed(isNaN(seedInput) ? 42 : seedInput);
+      rng = createRNG(currentSeed);
+
+      const m = parseInt(document.getElementById('slider-m').value, 10);
+      const n = parseInt(document.getElementById('slider-n').value, 10);
+      
+      resetSimulationState(m, n);
+
+      while (stepSimulation()) {}
+
+      updateMetricsDashboard();
+      renderAllCharts();
+      document.getElementById('sim-status').textContent = `Batch complete • ${m} hackers × ${n} systems generated`;
+    }
+
+    function toggleProgressiveAnimation() {
+      if (isProgressiveStreaming) {
+        stopProgressiveAnimation();
+      } else {
+        startProgressiveAnimation();
+      }
+    }
+
+    function startProgressiveAnimation() {
+      stopProgressiveAnimation();
+      
+      const seedInput = parseInt(document.getElementById('rng-seed').value, 10);
+      setSeed(isNaN(seedInput) ? 42 : seedInput);
+      rng = createRNG(currentSeed);
+
+      const m = parseInt(document.getElementById('slider-m').value, 10);
+      const n = parseInt(document.getElementById('slider-n').value, 10);
+
+      resetSimulationState(m, n);
+      isProgressiveStreaming = true;
+
+      document.getElementById('anim-indicator').className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+      document.getElementById('anim-btn-text').textContent = "Stop Streaming";
+      document.getElementById('btn-run').disabled = true;
+      document.getElementById('btn-run').classList.add('opacity-50', 'cursor-not-allowed');
+
+      function animLoop() {
+        if (!isProgressiveStreaming) return;
+        
+        const batchSize = 4;
+        let running = true;
+        for (let s = 0; s < batchSize; s++) {
+          if (!stepSimulation()) {
+            running = false;
+            break;
+          }
+          if (simState.currentStep >= simState.n) {
+            running = false;
+            break;
+          }
+        }
+
+        updateMetricsDashboard();
+        renderAllCharts();
+
+        if (running && simState.currentStep < simState.n) {
+          document.getElementById('sim-status').textContent = `Streaming system ${simState.currentStep} of ${simState.n}...`;
+          animFrameId = requestAnimationFrame(animLoop);
+        } else {
+          stopProgressiveAnimation();
+          document.getElementById('sim-status').textContent = `Streaming complete • ${simState.m} hackers converged at n=${simState.n}`;
+        }
+      }
+
+      animFrameId = requestAnimationFrame(animLoop);
+    }
+
+    function stopProgressiveAnimation() {
+      isProgressiveStreaming = false;
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+
+      document.getElementById('anim-indicator').className = "w-2 h-2 rounded-full bg-slate-400";
+      document.getElementById('anim-btn-text').textContent = "Progressive Streaming";
+      const runBtn = document.getElementById('btn-run');
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    /* =========================================================================
+     * 5. DASHBOARD & METRICS (Strict currentStep = 0 handling)
+     * ========================================================================= */
+    function updateMetricsDashboard() {
+      const dist = DISTRIBUTIONS[currentDistKey];
+      
+      // Strict guard against uninitialized state
+      if (!simState.currentStep || simState.currentStep === 0) {
+        document.getElementById('metric-theo-mean').textContent = dist.theoreticalMean.toFixed(3);
+        document.getElementById('metric-emp-mean').textContent = '-';
+        document.getElementById('metric-theo-var').textContent = dist.theoreticalVariance.toFixed(3);
+        document.getElementById('metric-emp-var').textContent = '-';
+        document.getElementById('metric-theo-se').textContent = '-';
+        document.getElementById('metric-emp-se').textContent = '-';
+        document.getElementById('metric-bias-mean').textContent = '-';
+        document.getElementById('metric-bias-var').textContent = '-';
+        document.getElementById('hist-stat-sd').textContent = '-';
+        document.getElementById('hist-stat-target').textContent = '-';
+        document.getElementById('hist-subtitle').textContent = "Simulation not started (k = 0)";
+        return;
+      }
+
+      const k = simState.currentStep;
+      const m = simState.m;
+      const theoMean = dist.theoreticalMean;
+      const theoVar = dist.theoreticalVariance;
+      const theoSE = Math.sqrt(theoVar / k);
+
+      const empGrandMean = simState.grandMeans[k] || 0;
+      const empGrandVar = simState.grandVars[k]; // NaN when k = 1
+
+      let sumSqMeanDiff = 0;
+      let sumSqVarDiff = 0;
+      let validVarCount = 0;
+
+      for (let j = 0; j < m; j++) {
+        const meanDiff = simState.hackers[j].meanHistory[k] - empGrandMean;
+        sumSqMeanDiff += meanDiff * meanDiff;
+        
+        const v = simState.hackers[j].varHistory[k];
+        if (!isNaN(v) && !isNaN(empGrandVar)) {
+          const varDiff = v - empGrandVar;
+          sumSqVarDiff += varDiff * varDiff;
+          validVarCount++;
+        }
+      }
+
+      const empSDOfMeans = m > 1 ? Math.sqrt(sumSqMeanDiff / (m - 1)) : 0;
+      const empSDOfVars = validVarCount > 1 ? Math.sqrt(sumSqVarDiff / (validVarCount - 1)) : NaN;
+
+      const devMean = empGrandMean - theoMean;
+      const devVar = !isNaN(empGrandVar) ? (empGrandVar - theoVar) : NaN;
+
+      document.getElementById('metric-theo-mean').textContent = theoMean.toFixed(3);
+      document.getElementById('metric-emp-mean').textContent = empGrandMean.toFixed(3);
+      
+      document.getElementById('metric-theo-var').textContent = theoVar.toFixed(3);
+      document.getElementById('metric-emp-var').textContent = isNaN(empGrandVar) ? "N/A (k=1)" : empGrandVar.toFixed(3);
+
+      document.getElementById('metric-theo-se').textContent = theoSE.toFixed(3);
+      document.getElementById('metric-emp-se').textContent = empSDOfMeans.toFixed(3);
+
+      document.getElementById('metric-bias-mean').innerHTML = 
+        `<span class="${Math.abs(devMean) < 0.1 ? 'text-emerald-600' : 'text-slate-800'}">${devMean >= 0 ? '+' : ''}${devMean.toFixed(3)}</span>`;
+      
+      document.getElementById('metric-bias-var').innerHTML = isNaN(devVar)
+        ? `<span class="text-slate-400">N/A</span>`
+        : `<span class="${Math.abs(devVar) < 0.2 ? 'text-emerald-600' : 'text-slate-800'}">${devVar >= 0 ? '+' : ''}${devVar.toFixed(3)}</span>`;
+
+      const isMean = plotMode === "mean";
+      const empiricalSD = isMean ? empSDOfMeans : empSDOfVars;
+      const theoreticalSD = isMean 
+        ? Math.sqrt(theoVar / k) 
+        : (k >= 2 ? Math.sqrt(getExactVarianceOfSampleVariance(dist, k)) : NaN);
+
+      document.getElementById('hist-stat-sd').textContent = isNaN(empiricalSD) ? "N/A (k=1)" : empiricalSD.toFixed(3);
+      document.getElementById('hist-stat-target').textContent = isNaN(theoreticalSD) ? "N/A (k=1)" : theoreticalSD.toFixed(3);
+      
+      document.getElementById('hist-subtitle').textContent = 
+        isMean 
+          ? `Distribution of $\\bar{x}_n$ across ${m} hackers at step ${k}` 
+          : (k >= 2 ? `Distribution of $s^2_n$ across ${m} hackers at step ${k}` : `Sample variance $s^2$ is undefined for $k=1$`);
+
+      document.getElementById('hist-stat-note').textContent = 
+        isMean 
+          ? "Validates CLT: dispersion tightens as σ/√n. Binned via modified Freedman-Diaconis rule." 
+          : "Validates estimator variance: dispersion tightens as √Var(S²). Binned via modified Freedman-Diaconis rule.";
+
+      renderMathInPage(document.getElementById('hist-subtitle'));
+    }
+
+    /* =========================================================================
+     * 6. CANVAS RENDERING
+     * ========================================================================= */
+    function getCanvasContext(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    function renderAllCharts() {
+      renderTrajectoryChart();
+      renderHistogramChart();
+    }
+
+    function renderTrajectoryChart() {
+      const c = getCanvasContext('chart-trajectories');
+      if (!c) return;
+      const { ctx, width, height } = c;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const padding = { top: 20, right: 30, bottom: 35, left: 45 };
+      const plotW = width - padding.left - padding.right;
+      const plotH = height - padding.top - padding.bottom;
+
+      const isMean = plotMode === "mean";
+      const dist = DISTRIBUTIONS[currentDistKey];
+      const targetVal = isMean ? dist.theoreticalMean : dist.theoreticalVariance;
+      const kCur = simState.currentStep;
+
+      let maxObserved = 0;
+      if (kCur > 0) {
+        for (let j = 0; j < simState.m; j++) {
+          const hist = isMean ? simState.hackers[j].meanHistory : simState.hackers[j].varHistory;
+          for (let i = (isMean ? 1 : 2); i <= kCur; i++) {
+            if (!isNaN(hist[i]) && hist[i] > maxObserved) maxObserved = hist[i];
+          }
+        }
+      }
+
+      const minY = 0.0;
+      const maxY = isMean
+        ? Math.max(10.0, targetVal * 1.25, maxObserved * 1.1)
+        : Math.max(2.0, targetVal * 1.5, maxObserved * 1.1);
+
+      document.getElementById('chart-scale-note').textContent = `Y-axis: [${minY.toFixed(1)}, ${maxY.toFixed(1)}] • Dynamic unclipped`;
+
+      function getX(k) { return padding.left + (k / simState.n) * plotW; }
+      function getY(v) { return padding.top + plotH - ((v - minY) / (maxY - minY)) * plotH; }
+
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px Inter, sans-serif';
+      ctx.textAlign = 'right';
+
+      const yTicks = 5;
+      for (let i = 0; i <= yTicks; i++) {
+        const val = minY + (i / yTicks) * (maxY - minY);
+        const y = getY(val);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(padding.left + plotW, y);
+        ctx.stroke();
+        ctx.fillText(val.toFixed(1), padding.left - 8, y + 3);
+      }
+
+      ctx.textAlign = 'center';
+      const xTicks = 6;
+      for (let i = 0; i <= xTicks; i++) {
+        const kVal = Math.round((i / xTicks) * simState.n);
+        const x = getX(kVal);
+        ctx.fillText(kVal, x, height - padding.bottom + 16);
+      }
+      ctx.fillText("Systems Attempted (k)", padding.left + plotW / 2, height - 6);
+
+      if (kCur === 0) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("Ready. Press 'Run Batch Simulation' or 'Progressive Streaming'", padding.left + plotW / 2, padding.top + plotH / 2);
+        return;
+      }
+
+      // Stream trajectories
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = isMean ? 'rgba(99, 102, 241, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+      
+      for (let j = 0; j < simState.m; j++) {
+        const hist = isMean ? simState.hackers[j].meanHistory : simState.hackers[j].varHistory;
+        ctx.beginPath();
+        const startK = isMean ? 1 : 2;
+        if (kCur >= startK && !isNaN(hist[startK])) {
+          ctx.moveTo(getX(startK), getY(hist[startK]));
+          for (let k = startK + 1; k <= kCur; k++) {
+            if (!isNaN(hist[k])) {
+              ctx.lineTo(getX(k), getY(hist[k]));
+            }
+          }
+          ctx.stroke();
+        }
+      }
+
+      // Grand Average Line
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = isMean ? '#4f46e5' : '#059669';
+      ctx.beginPath();
+      const startK = isMean ? 1 : 2;
+      const grandArr = isMean ? simState.grandMeans : simState.grandVars;
+      if (kCur >= startK && !isNaN(grandArr[startK])) {
+        ctx.moveTo(getX(startK), getY(grandArr[startK]));
+        for (let k = startK + 1; k <= kCur; k++) {
+          if (!isNaN(grandArr[k])) {
+            ctx.lineTo(getX(k), getY(grandArr[k]));
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Target Line
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#e11d48';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      const targetY = getY(targetVal);
+      ctx.moveTo(padding.left, targetY);
+      ctx.lineTo(padding.left + plotW, targetY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#e11d48';
+      ctx.font = 'bold 10px Inter, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${isMean ? 'μ' : 'σ²'} = ${targetVal.toFixed(2)}`, padding.left + plotW, targetY - 5);
+    }
+
+    function renderHistogramChart() {
+      const c = getCanvasContext('chart-histogram');
+      if (!c) return;
+      const { ctx, width, height } = c;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const padding = { top: 20, right: 20, bottom: 35, left: 40 };
+      const plotW = width - padding.left - padding.right;
+      const plotH = height - padding.top - padding.bottom;
+
+      const isMean = plotMode === "mean";
+      const dist = DISTRIBUTIONS[currentDistKey];
+      const targetVal = isMean ? dist.theoreticalMean : dist.theoreticalVariance;
+      const kCur = simState.currentStep;
+      const m = simState.m;
+
+      if (kCur === 0) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("Awaiting simulation data", width / 2, height / 2);
+        return;
+      }
+
+      if (!isMean && kCur < 2) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("Sample variance is undefined for k = 1", width / 2, height / 2);
+        return;
+      }
+
+      const values = [];
+      for (let j = 0; j < m; j++) {
+        const val = isMean ? simState.hackers[j].meanHistory[kCur] : simState.hackers[j].varHistory[kCur];
+        if (!isNaN(val)) values.push(val);
+      }
+      if (values.length === 0) return;
+
+      const sorted = [...values].sort((a, b) => a - b);
+      const q1 = sorted[Math.floor(sorted.length * 0.25)];
+      const q3 = sorted[Math.floor(sorted.length * 0.75)];
+      const iqr = q3 - q1;
+      
+      let binWidth = iqr > 0 ? (2 * iqr * Math.pow(sorted.length, -1/3)) : 0;
+      const minObs = sorted[0];
+      const maxObs = sorted[sorted.length - 1];
+
+      let binCount = 14;
+      if (binWidth > 0 && maxObs > minObs) {
+        binCount = Math.max(8, Math.min(24, Math.round((maxObs - minObs) / binWidth)));
+      }
+
+      const span = Math.max(0.6, (maxObs - minObs) * 1.25);
+      const histMin = Math.max(0, Math.min(minObs - 0.05, targetVal - span / 2));
+      const histMax = Math.max(maxObs + 0.05, targetVal + span / 2);
+      const calcBinWidth = (histMax - histMin) / binCount;
+
+      const bins = new Array(binCount).fill(0);
+      for (let i = 0; i < values.length; i++) {
+        let b = Math.floor((values[i] - histMin) / calcBinWidth);
+        if (b < 0) b = 0;
+        if (b >= binCount) b = binCount - 1;
+        bins[b]++;
+      }
+
+      let maxFreq = 0;
+      for (let i = 0; i < bins.length; i++) if (bins[i] > maxFreq) maxFreq = bins[i];
+
+      function getX(v) { return padding.left + ((v - histMin) / (histMax - histMin)) * plotW; }
+      function getY(count) { return padding.top + plotH - (count / Math.max(1, maxFreq)) * plotH; }
+
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px Inter, sans-serif';
+      ctx.textAlign = 'right';
+
+      ctx.beginPath();
+      ctx.moveTo(padding.left, getY(maxFreq));
+      ctx.lineTo(padding.left + plotW, getY(maxFreq));
+      ctx.stroke();
+      ctx.fillText(maxFreq, padding.left - 6, getY(maxFreq) + 3);
+
+      ctx.fillText('0', padding.left - 6, height - padding.bottom + 3);
+
+      for (let b = 0; b < binCount; b++) {
+        const count = bins[b];
+        if (count === 0) continue;
+        const x1 = getX(histMin + b * calcBinWidth);
+        const x2 = getX(histMin + (b + 1) * calcBinWidth);
+        const y = getY(count);
+        const h = (padding.top + plotH) - y;
+
+        ctx.fillStyle = isMean ? 'rgba(99, 102, 241, 0.7)' : 'rgba(16, 185, 129, 0.7)';
+        ctx.fillRect(x1 + 1, y, Math.max(1, (x2 - x1) - 2), h);
+        ctx.strokeStyle = isMean ? '#4f46e5' : '#059669';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x1 + 1, y, Math.max(1, (x2 - x1) - 2), h);
+      }
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.moveTo(padding.left, height - padding.bottom);
+      ctx.lineTo(padding.left + plotW, height - padding.bottom);
+      ctx.stroke();
+
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'center';
+      ctx.fillText(histMin.toFixed(2), padding.left, height - padding.bottom + 16);
+      ctx.fillText(histMax.toFixed(2), padding.left + plotW, height - padding.bottom + 16);
+
+      const targetX = getX(targetVal);
+      if (targetX >= padding.left && targetX <= padding.left + plotW) {
+        ctx.strokeStyle = '#e11d48';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(targetX, padding.top);
+        ctx.lineTo(targetX, height - padding.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#e11d48';
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.fillText(`Target: ${targetVal.toFixed(2)}`, targetX, padding.top + 10);
+      }
+    }
+
+    /* =========================================================================
+     * 7. UI HANDLERS & NAVIGATION
+     * ========================================================================= */
+    function setPlotMode(mode) {
+      plotMode = mode;
+      const btnMean = document.getElementById('btn-view-mean');
+      const btnVar = document.getElementById('btn-view-var');
+      
+      if (mode === "mean") {
+        btnMean.className = "px-2.5 py-1 rounded bg-white text-indigo-700 shadow-xs font-semibold";
+        btnVar.className = "px-2.5 py-1 rounded text-slate-600 hover:text-slate-900";
+      } else {
+        btnVar.className = "px-2.5 py-1 rounded bg-white text-emerald-700 shadow-xs font-semibold";
+        btnMean.className = "px-2.5 py-1 rounded text-slate-600 hover:text-slate-900";
+      }
+
+      updateMetricsDashboard();
+      renderAllCharts();
+    }
+
+    function onDistributionChange() {
+      currentDistKey = document.getElementById('dist-select').value;
+      runSimulation();
+    }
+
+    function updateControlLabels() {
+      document.getElementById('label-m').textContent = document.getElementById('slider-m').value;
+      document.getElementById('label-n').textContent = document.getElementById('slider-n').value;
+    }
+
+    function switchView(viewId) {
+      stopProgressiveAnimation();
+
+      const viewSim = document.getElementById('view-sim');
+      const viewMath = document.getElementById('view-math');
+      const btnSim = document.getElementById('nav-btn-sim');
+      const btnMath = document.getElementById('nav-btn-math');
+
+      if (viewId === 'sim') {
+        viewSim.classList.remove('hidden');
+        viewMath.classList.add('hidden');
+        btnSim.className = "px-3.5 py-1.5 rounded-md transition-colors bg-white text-indigo-700 shadow-sm font-semibold";
+        btnMath.className = "px-3.5 py-1.5 rounded-md transition-colors text-slate-600 hover:text-slate-900";
+        requestAnimationFrame(() => renderAllCharts());
+      } else {
+        viewSim.classList.add('hidden');
+        viewMath.classList.remove('hidden');
+        btnMath.className = "px-3.5 py-1.5 rounded-md transition-colors bg-white text-indigo-700 shadow-sm font-semibold";
+        btnSim.className = "px-3.5 py-1.5 rounded-md transition-colors text-slate-600 hover:text-slate-900";
+        renderMathInPage();
+      }
+    }
+
+    function renderMathInPage(element = document.body) {
+      if (window.renderMathInElement) {
+        renderMathInElement(element, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false,
+          ignoredClasses: ['katex']
+        });
+      }
+    }
+
+    let resizeThrottle;
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(resizeThrottle);
+      resizeThrottle = requestAnimationFrame(() => renderAllCharts());
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updateControlLabels();
+      runSimulation();
+      setTimeout(() => renderMathInPage(), 100);
+    });
+  </script>
+</body>
+</html>
