@@ -139,9 +139,9 @@
   <!-- ROUTING INTERNO -->
   <script>
     function renderView() {
-      const isFolder = window.location.hash === '#homework5';
+      const isFolder = window.location.hash === '#homework4';
       const rootEl = document.getElementById('view-root');
-      const folderEl = document.getElementById('view-homework5');
+      const folderEl = document.getElementById('view-homework4');
       const bRoot = document.getElementById('breadcrumb-root');
       const bFolder = document.getElementById('breadcrumb-folder');
       const badge = document.getElementById('badge-count');
@@ -164,8 +164,8 @@
     }
 
     function navigate(destination) {
-      if (destination === 'homework5') {
-        window.location.hash = 'homework5';
+      if (destination === 'homework4') {
+        window.location.hash = 'homework4';
       } else {
         window.location.hash = '';
       }
