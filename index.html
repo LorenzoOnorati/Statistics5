@@ -123,7 +123,7 @@
     </div>
 
     <!-- VISTA DENTRO HW5 -->
-    <div id="view-hw5" class="hidden space-y-4">
+    <div id="view-homework5" class="hidden space-y-4">
       <a 
         href="./riemann_vs_lebesgue_integration.html"
         class="block bg-white rounded-xl border border-slate-200 hover:border-indigo-400 p-6 shadow-xs hover:shadow-md transition-all duration-200 group"
@@ -188,7 +188,7 @@
       const hash = window.location.hash;
       const rootEl = document.getElementById('view-root');
       const hw4El = document.getElementById('view-homework4');
-      const hw5El = document.getElementById('view-hw5');
+      const hw5El = document.getElementById('view-homework5');
       const bRoot = document.getElementById('breadcrumb-root');
       const bFolder = document.getElementById('breadcrumb-folder');
       const bCurrent = document.getElementById('breadcrumb-current-folder');
@@ -203,7 +203,7 @@
       bFolder.classList.add('hidden');
       badge.classList.add('hidden');
 
-      if (hash === '#hw5') {
+      if (hash === '#homework5') {
         hw5El.classList.remove('hidden');
         bFolder.classList.remove('hidden');
         bFolder.classList.add('flex');
