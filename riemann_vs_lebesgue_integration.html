@@ -341,7 +341,9 @@
           </p>
           <ul class="list-disc list-inside mt-2 space-y-1 text-neutral-600">
             <li><strong>Convergence Speed:</strong> Riemann midpoint rule converges quadratically $O(\Delta x^2)$ for smooth functions. Numerical Lebesgue discretizations using level-sets converge linearly $O(\Delta y)$.</li>
-            <li><strong>Computational Cost:</strong> Riemann evaluates $f$ directly at $N$ points in $O(N)$ operations. Numerical Lebesgue requires sorting or sampling into bins, costing $O(S + M)$ operations.</li>
+            
+<li><strong>Computational Cost:</strong> Riemann evaluates $f$ directly at $N$ points in $O(N)$ operations, assuming constant-time function evaluations. Numerical Lebesgue methods require sampling and grouping function values into $M$ bins, costing $O(S + M)$ operations when using direct binning. If sorting is required instead, the cost generally becomes $O(S \log S + M)$ operations, where $S$ is the number of samples.</li>
+
             <li><strong>Scope of Integrability:</strong> The reverse is false. Functions like Dirichlet's are Lebesgue-integrable but completely fail under Riemann integration.</li>
           </ul>
         </div>
