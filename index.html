@@ -107,7 +107,7 @@
               </span>
             </div>
             <p class="text-xs text-slate-400 mt-0.5 font-mono">
-              2 item • Click to open
+              2 items • Click to open
             </p>
           </div>
         </div>
@@ -153,22 +153,7 @@
     </div>
   <!-- VISTA DENTRO HW6 -->
     <div id="view-homework6" class="hidden space-y-4">
-      <a 
-        href="./riemann_vs_lebesgue_integration.html"
-        class="block bg-white rounded-xl border border-slate-200 hover:border-indigo-400 p-6 shadow-xs hover:shadow-md transition-all duration-200 group"
-      >
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
-              statistical independence
-            </h2>
-           
-          </div>
-          <svg class="w-5 h-5 text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </a>
+     
        <a 
         href="./statistical_independence_contingency_analysis.html"
         class="block bg-white rounded-xl border border-slate-200 hover:border-indigo-400 p-6 shadow-xs hover:shadow-md transition-all duration-200 group"
@@ -308,7 +293,7 @@
         badge.innerText = '2 exercises';
         badge.classList.remove('hidden');
         } else if (hash === '#homework6') {
-        hw4El.classList.remove('hidden');
+        hw6El.classList.remove('hidden');
         bFolder.classList.remove('hidden');
         bFolder.classList.add('flex');
         bCurrent.innerHTML = `
@@ -317,7 +302,7 @@
           </svg>
           homework6
         `;
-        badge.innerText = '1 exercises';
+        badge.innerText = '1 exercise';
         badge.classList.remove('hidden');
       } else {
         rootEl.classList.remove('hidden');
