@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statistical Independence &amp; Contingency Analysis</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for conditional profile visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- KaTeX core CSS & JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <!-- KaTeX Auto-render Extension -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="initKaTeX()"></script>
+  <style>
+    body {
+      background-color: #ffffff;
+      color: #111827;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #999;
+    }
+    canvas {
+      display: block;
+    }
+    .katex-display {
+      margin: 0.5em 0 !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scroll selection:bg-neutral-200 selection:text-black">
+
+  <!-- Header -->
+  <header class="border-b border-neutral-200 bg-white/95 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded border border-neutral-300 bg-neutral-100 flex items-center justify-center font-mono font-bold text-black text-base shadow-sm">
+        $\chi^2$
+      </div>
+      <div>
+        <h1 class="text-lg font-semibold tracking-wide text-neutral-900">Statistical Independence &amp; Contingency Analysis</h1>
+        <p class="text-xs text-neutral-500">Programmatic contingency tables, conditional distributions, and Pearson's $\chi^2$ test for bivariate data $(X, F)$</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center px-2.5 py-1 rounded text-xs font-mono font-medium border border-neutral-300 bg-neutral-50 text-neutral-700">
+        Statistical Inference &bull; Scientific Lab
+      </span>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Dataset Builder, Controls & Hypothesis Test Summary (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+
+      <!-- 1. Bivariate Dataset Input Card -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-black"></span>
+            1. Bivariate Dataset $(X, F)$
+          </h2>
+          <span id="badgeSampleSize" class="text-[11px] font-mono bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded text-neutral-800 font-semibold">
+            $N = 0$
+          </span>
+        </div>
+
+        <!-- Dataset Presets -->
+        <div class="mb-3">
+          <span class="block text-xs text-neutral-500 mb-1.5">Select curated bivariate dataset:</span>
+          <div class="grid grid-cols-2 gap-1.5 text-xs font-mono">
+            <button class="dataset-preset-btn px-2.5 py-1.5 rounded border border-black bg-neutral-100 font-bold text-left transition" data-preset="confounding">
+              1. Ice Cream vs. Swim
+            </button>
+            <button class="dataset-preset-btn px-2.5 py-1.5 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-left transition" data-preset="independent">
+              2. Coin vs. Die Parity
+            </button>
+            <button class="dataset-preset-btn px-2.5 py-1.5 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-left transition" data-preset="education">
+              3. Study Method vs. Grade
+            </button>
+            <button class="dataset-preset-btn px-2.5 py-1.5 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-left transition" data-preset="simulated_indep">
+              4. Random Indep. Sample
+            </button>
+          </div>
+        </div>
+
+        <!-- Dataset Description Banner -->
+        <p id="datasetContextNote" class="text-[11px] text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg p-2.5 mb-3 leading-relaxed">
+          Loading dataset context...
+        </p>
+
+        <!-- Raw Bivariate Pairs Editor -->
+        <div class="mb-3">
+          <div class="flex justify-between items-center text-xs mb-1">
+            <label for="rawDatasetInput" class="text-neutral-700 font-medium">Raw observations $(x_k, f_k)$ (one pair per line):</label>
+            <div class="flex items-center gap-1.5">
+              <button id="btnAppendRandom" class="text-[11px] font-mono px-2 py-0.5 rounded border border-neutral-300 hover:border-black bg-white transition">
+                +10 Random
+              </button>
+              <button id="btnParseDataset" class="text-[11px] font-mono px-2 py-0.5 rounded bg-black hover:bg-neutral-800 text-white transition">
+                Compute
+              </button>
+            </div>
+          </div>
+          <textarea id="rawDatasetInput" rows="6" spellcheck="false"
+                    class="w-full bg-neutral-50 border border-neutral-300 text-neutral-900 rounded-lg p-2.5 text-xs font-mono focus:outline-none focus:border-black custom-scroll leading-relaxed"
+                    placeholder="CategoryX, CategoryF"></textarea>
+          <div id="datasetErrorBox" class="hidden mt-2 p-2 rounded bg-neutral-100 border border-neutral-400 text-[11px] text-neutral-900 font-mono">
+          </div>
+        </div>
+
+        <!-- Significance Level Alpha -->
+        <div class="pt-3 border-t border-neutral-200 flex items-center justify-between gap-3">
+          <label for="selectAlpha" class="text-xs text-neutral-700 font-medium">Significance level $\alpha$:</label>
+          <select id="selectAlpha" class="bg-neutral-50 border border-neutral-300 text-neutral-900 rounded-md px-2.5 py-1 text-xs font-mono focus:outline-none focus:border-black">
+            <option value="0.10">α = 0.10 (90% confidence)</option>
+            <option value="0.05" selected>α = 0.05 (95% confidence)</option>
+            <option value="0.01">α = 0.01 (99% confidence)</option>
+            <option value="0.001">α = 0.001 (99.9% confidence)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 2. Chi-Square Hypothesis Test Results -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase mb-3 flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-black"></span>
+            2. Pearson's $\chi^2$ Test Summary
+          </span>
+          <span class="text-[10px] text-neutral-500 font-mono">$H_0: X \perp\!\!\!\perp F$</span>
+        </h2>
+
+        <div class="space-y-2 text-xs font-mono">
+          <!-- Chi-Square Statistic -->
+          <div class="p-2.5 rounded bg-neutral-100 border border-neutral-300 flex justify-between items-center">
+            <span class="text-neutral-800 font-bold">Chi-Square Statistic $\chi^2_{\text{obs}}$:</span>
+            <span id="statChiSq" class="text-black font-bold text-sm">-</span>
+          </div>
+
+          <!-- Degrees of Freedom & Critical Value -->
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-2 rounded bg-neutral-50 border border-neutral-200 flex flex-col">
+              <span class="text-[10px] text-neutral-500">Degrees of freedom $\nu$:</span>
+              <span id="statDof" class="text-black font-semibold mt-0.5">-</span>
+            </div>
+            <div class="p-2 rounded bg-neutral-50 border border-neutral-200 flex flex-col">
+              <span class="text-[10px] text-neutral-500">Critical value $\chi^2_{1-\alpha, \nu}$:</span>
+              <span id="statCritVal" class="text-black font-semibold mt-0.5">-</span>
+            </div>
+          </div>
+
+          <!-- p-value & Cramer's V -->
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-2 rounded bg-neutral-50 border border-neutral-200 flex flex-col">
+              <span class="text-[10px] text-neutral-500">$p$-value $P(\chi^2_\nu \ge \chi^2_{\text{obs}})$:</span>
+              <span id="statPVal" class="text-black font-semibold mt-0.5">-</span>
+            </div>
+            <div class="p-2 rounded bg-neutral-50 border border-neutral-200 flex flex-col">
+              <span class="text-[10px] text-neutral-500">Effect size (Cramér's $V$):</span>
+              <span id="statCramersV" class="text-black font-semibold mt-0.5">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistical Decision & Interpretation Box -->
+        <div id="decisionBox" class="mt-3 p-3 rounded-lg bg-neutral-50 border border-neutral-300 text-xs leading-relaxed text-neutral-800">
+          <div class="font-bold text-black mb-1" id="decisionHeadline">Evaluating hypothesis...</div>
+          <p class="text-[11px] text-neutral-600" id="decisionDetail">-</p>
+        </div>
+
+        <!-- Cochran's Rule / Small Expected Count Warning -->
+        <div id="cochranWarning" class="mt-2.5 hidden p-2.5 rounded bg-neutral-100 border border-neutral-300 text-[11px] text-neutral-700 leading-normal">
+          <strong>Asymptotic Validity Note (Cochran's Rule):</strong> One or more expected cell frequencies satisfy $E_{ij} &lt; 5$. The $\chi^2_\nu$ asymptotic approximation may be inaccurate for small sample sizes.
+        </div>
+      </div>
+
+      <!-- 3. Cell-by-Cell Contributions Breakdown -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase mb-2 flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-black"></span>
+          3. Cell Contributions &amp; Residuals
+        </h2>
+        <p class="text-[11px] text-neutral-500 mb-3">
+          Detailed comparison of observed counts $O_{ij}$, expected counts $E_{ij} = \frac{n_{i\bullet} n_{\bullet j}}{N}$, and standardized Pearson residuals $r_{ij} = \frac{O_{ij} - E_{ij}}{\sqrt{E_{ij}}}$.
+        </p>
+        <div class="overflow-x-auto max-h-64 custom-scroll">
+          <table class="w-full text-left font-mono text-[11px] border-collapse">
+            <thead class="sticky top-0 bg-neutral-50 z-10">
+              <tr class="border-b border-neutral-300 text-neutral-600">
+                <th class="py-1.5 px-2">Cell $(x_i, f_j)$</th>
+                <th class="py-1.5 px-2">$O_{ij}$</th>
+                <th class="py-1.5 px-2">$E_{ij}$</th>
+                <th class="py-1.5 px-2">$r_{ij}$</th>
+                <th class="py-1.5 px-2">$\frac{(O_{ij}-E_{ij})^2}{E_{ij}}$</th>
+              </tr>
+            </thead>
+            <tbody id="cellBreakdownBody" class="divide-y divide-neutral-200 text-neutral-800">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Contingency Matrix, Charts & Theory (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-6">
+
+      <!-- Programmatically Constructed Contingency Table Card -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+              Contingency Table &amp; Frequency Distributions
+            </h2>
+            <p class="text-xs text-neutral-500">
+              Switch matrix views to inspect absolute counts, marginal totals, conditional probabilities, and expected frequencies
+            </p>
+          </div>
+        </div>
+
+        <!-- Matrix View Selector Buttons -->
+        <div class="flex flex-wrap gap-1.5 mb-4 text-xs font-mono">
+          <button class="matrix-mode-btn px-2.5 py-1 rounded border border-black bg-black text-white transition" data-mode="observed">
+            Observed $O_{ij}$ ($E_{ij}$)
+          </button>
+          <button class="matrix-mode-btn px-2.5 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-neutral-800 transition" data-mode="joint">
+            Joint Rel. $f_{ij}$
+          </button>
+          <button class="matrix-mode-btn px-2.5 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-neutral-800 transition" data-mode="condRow">
+            Cond. Row $f_{j \mid i}$
+          </button>
+          <button class="matrix-mode-btn px-2.5 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-neutral-800 transition" data-mode="condCol">
+            Cond. Col $f_{i \mid j}$
+          </button>
+          <button class="matrix-mode-btn px-2.5 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-neutral-800 transition" data-mode="expected">
+            Expected $E_{ij}$
+          </button>
+          <button class="matrix-mode-btn px-2.5 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-neutral-800 transition" data-mode="chisq">
+            $\chi^2_{ij}$ Terms
+          </button>
+        </div>
+
+        <div id="matrixModeCaption" class="text-[11px] font-mono text-neutral-600 mb-2.5 bg-neutral-50 px-3 py-1.5 rounded border border-neutral-200">
+          Displaying observed joint counts $O_{ij}$ with expected counts $E_{ij}$ under independence in parentheses.
+        </div>
+
+        <!-- Dynamic Contingency Table Container -->
+        <div class="overflow-x-auto border border-neutral-200 rounded-lg">
+          <table id="contingencyTable" class="w-full text-left font-mono text-xs border-collapse">
+            <!-- Dynamically constructed by JavaScript -->
+          </table>
+        </div>
+      </div>
+
+      <!-- Visual Comparison: Conditional Distributions vs Marginal Distribution -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+              Conditional Profiles $P(F = f_j \mid X = x_i)$ vs. Marginal $P(F = f_j)$
+            </h2>
+            <p class="text-xs text-neutral-500">
+              Under statistical independence, conditional distributions across every row $x_i$ align with the overall marginal distribution
+            </p>
+          </div>
+          <span class="text-xs font-mono text-neutral-600 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded">
+            Conditional Frequency Profiles
+          </span>
+        </div>
+
+        <div class="relative w-full h-64">
+          <canvas id="conditionalChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Chi-Square Sampling Distribution Canvas -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+              Sampling Distribution $\chi^2_\nu$ &amp; Critical Rejection Region
+            </h2>
+            <p class="text-xs text-neutral-500">
+              Probability density $f_\nu(t)$ with shaded upper-tail rejection area $\alpha$ and observed test statistic $\chi^2_{\text{obs}}$
+            </p>
+          </div>
+          <div class="flex items-center gap-3 text-xs font-mono">
+            <span class="inline-flex items-center gap-1.5 text-neutral-700">
+              <span class="w-3 h-3 bg-neutral-300 border border-neutral-500 rounded-sm"></span> Rejection $\alpha$
+            </span>
+            <span class="inline-flex items-center gap-1.5 text-neutral-700">
+              <span class="w-3 h-0.5 bg-black"></span> PDF $\chi^2_\nu$
+            </span>
+          </div>
+        </div>
+
+        <div class="relative w-full aspect-[16/8] bg-white rounded-lg border border-neutral-300 overflow-hidden">
+          <canvas id="chiSqCanvas" class="w-full h-full"></canvas>
+        </div>
+      </div>
+
+      <!-- Theoretical Foundations & Interpretation Panel -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm space-y-4">
+        <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+          Theoretical Foundations: Independence, $\chi^2$ Test &amp; Causality
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-neutral-700">
+          <!-- Probability & Statistical Independence Card -->
+          <div class="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200">
+            <h3 class="font-bold text-black mb-1.5 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-black rounded-full"></span>
+              Independence in Probability &amp; Statistics
+            </h3>
+            <p class="mb-2 text-neutral-600">
+              Two discrete random variables $X$ and $F$ are <strong>statistically independent</strong> ($X \perp\!\!\!\perp F$) if and only if their joint probability distribution factorizes into the product of their marginal distributions for all $(i, j)$:
+            </p>
+            <div class="my-2 p-1.5 bg-white border border-neutral-300 rounded text-center">
+              $$P(X = x_i, F = f_j) = P(X = x_i) \cdot P(F = f_j)$$
+            </div>
+            <p class="text-neutral-600">
+              Equivalently, knowing the value of $X$ provides zero information about $F$, meaning conditional probabilities equal unconditional marginal probabilities:
+            </p>
+            <div class="my-2 p-1.5 bg-white border border-neutral-300 rounded text-center">
+              $$P(F = f_j \mid X = x_i) = \frac{P(X = x_i, F = f_j)}{P(X = x_i)} = P(F = f_j)$$
+            </div>
+            <p class="text-neutral-600">
+              In a sample of size $N$, replacing theoretical probabilities by empirical marginal frequencies $\hat{p}_{i\bullet} = \frac{n_{i\bullet}}{N}$ and $\hat{p}_{\bullet j} = \frac{n_{\bullet j}}{N}$ yields the expected frequency under $H_0$:
+              $$E_{ij} = N \cdot \hat{p}_{i\bullet} \cdot \hat{p}_{\bullet j} = \frac{n_{i\bullet} \cdot n_{\bullet j}}{N}$$
+            </p>
+          </div>
+
+          <!-- Pearson Chi-Square Statistic Card -->
+          <div class="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200">
+            <h3 class="font-bold text-black mb-1.5 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-neutral-500 rounded-full"></span>
+              Pearson's Chi-Square Statistic ($\chi^2$)
+            </h3>
+            <p class="mb-2 text-neutral-600">
+              To quantify global departure from independence across an $R \times C$ contingency table, Pearson's statistic sums the normalized squared discrepancies between observed counts $O_{ij}$ and expected counts $E_{ij}$:
+            </p>
+            <div class="my-2 p-1.5 bg-white border border-neutral-300 rounded text-center font-semibold">
+              $$\chi^2 = \sum_{i=1}^{R} \sum_{j=1}^{C} \frac{(O_{ij} - E_{ij})^2}{E_{ij}}$$
+            </div>
+            <p class="text-neutral-600">
+              Under the null hypothesis $H_0$ of independence and sufficiently large sample sizes, $\chi^2$ converges asymptotically to a chi-square distribution with $\nu = (R - 1)(C - 1)$ degrees of freedom. The $p$-value is given by the upper regularized incomplete gamma function:
+              $$p\text{-value} = P(\chi^2_\nu \ge \chi^2_{\text{obs}}) = Q\left(\frac{\nu}{2}, \frac{\chi^2_{\text{obs}}}{2}\right)$$
+            </p>
+          </div>
+        </div>
+
+        <!-- Association vs Causality Card -->
+        <div class="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200 text-xs text-neutral-700">
+          <h3 class="font-bold text-black mb-2 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-black rounded-full"></span>
+            Statistical Association vs. Causality
+          </h3>
+          <p class="text-neutral-600 mb-2">
+            Rejecting the null hypothesis ($p &lt; \alpha$) establishes <strong>statistical dependence (association)</strong> between $X$ and $F$, meaning their joint behavior deviates systematically from randomness. However, <strong>statistical association does not imply causation</strong>:
+          </p>
+          <ul class="list-disc list-inside space-y-1.5 text-neutral-600">
+            <li>
+              <strong>Confounding (Lurking) Variables:</strong> A third unmeasured variable $Z$ may causally drive both $X$ and $F$ simultaneously. For example, in Preset 1, high <em>Ice Cream Sales</em> ($X$) are strongly associated with <em>Beach Rescue Incidents</em> ($F$), yet neither causes the other: ambient summer temperature ($Z$) increases both.
+            </li>
+            <li>
+              <strong>Directionality &amp; Reverse Causation:</strong> The $\chi^2$ test is symmetric with respect to $X$ and $F$ ($\chi^2(X, F) = \chi^2(F, X)$) and cannot distinguish whether $X \to F$ or $F \to X$.
+            </li>
+            <li>
+              <strong>Statistical Significance vs. Practical Magnitude:</strong> For very large $N$, tiny departures from independence yield large $\chi^2$ values. Normalized effect-size metrics such as <strong>Cramér's $V = \sqrt{\frac{\chi^2}{N \min(R-1, C-1)}} \in [0, 1]$</strong> measure the practical strength of association independently of sample size.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-neutral-200 py-4 px-6 text-center text-xs text-neutral-500 font-mono bg-white">
+    Statistical Independence Lab &bull; Contingency Tables, Conditional Distributions &amp; Pearson's $\chi^2$ Test
+  </footer>
+
+  <!-- Script Logic -->
+  <script>
+    /* -------------------------------------------------------------
+       1. KaTeX Auto-Render Initializer
+       ------------------------------------------------------------- */
+    function initKaTeX() {
+      if (window.renderMathInElement) {
+        renderMathInElement(document.body, {
+          delimiters: [
+            { left: "$$", right: "$$", display: true },
+            { left: "$", right: "$", display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    function renderDynamicMath(el) {
+      if (window.renderMathInElement && el) {
+        renderMathInElement(el, {
+          delimiters: [
+            { left: "$$", right: "$$", display: true },
+            { left: "$", right: "$", display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    /* -------------------------------------------------------------
+       2. High-Precision Gamma & Chi-Square Distribution Functions
+          Computes p-value = Q(dof/2, chiSq/2) and critical quantiles
+       ------------------------------------------------------------- */
+    function logGamma(z) {
+      const c = [
+        676.5203681218851,
+        -1259.1392167224028,
+        771.3234287776531,
+        -176.6150291621406,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.984369578019572e-6,
+        1.5056327351493116e-7
+      ];
+      if (z < 0.5) {
+        return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - logGamma(1 - z);
+      }
+      z -= 1;
+      let x = 0.99999999999980993;
+      for (let i = 0; i < c.length; i++) {
+        x += c[i] / (z + i + 1);
+      }
+      const t = z + 7.5;
+      return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+    }
+
+    function gammaP(a, x) {
+      if (x <= 0) return 0;
+      const gln = logGamma(a);
+      const EPS = 1e-15;
+      const MAX_ITER = 10000;
+      if (x >= a + 1) {
+        return 1 - gammaQ(a, x);
+      }
+      let sum = 1 / a;
+      let term = sum;
+      let ap = a;
+      for (let n = 1; n <= MAX_ITER; n++) {
+        ap++;
+        term *= x / ap;
+        sum += term;
+        if (Math.abs(term) < Math.abs(sum) * EPS) break;
+      }
+      return sum * Math.exp(-x + a * Math.log(x) - gln);
+    }
+
+    function gammaQ(a, x) {
+      if (x <= 0) return 1;
+      const gln = logGamma(a);
+      const EPS = 1e-15;
+      const FPMIN = 1e-300;
+      const MAX_ITER = 10000;
+      if (x < a + 1) {
+        return 1 - gammaP(a, x);
+      }
+      let b = x + 1 - a;
+      let c = 1 / FPMIN;
+      let d = 1 / b;
+      let h = d;
+      for (let i = 1; i <= MAX_ITER; i++) {
+        const an = -i * (i - a);
+        b += 2;
+        d = an * d + b;
+        if (Math.abs(d) < FPMIN) d = FPMIN;
+        c = b + an / c;
+        if (Math.abs(c) < FPMIN) c = FPMIN;
+        d = 1 / d;
+        const delta = d * c;
+        h *= delta;
+        if (Math.abs(delta - 1) < EPS) break;
+      }
+      return Math.exp(-x + a * Math.log(x) - gln) * h;
+    }
+
+    // Upper-tail p-value for Chi-Square(dof): P(ChiSq >= x)
+    function chiSquarePValue(chiSq, dof) {
+      if (chiSq <= 0) return 1.0;
+      if (dof <= 0) return NaN;
+      return gammaQ(0.5 * dof, 0.5 * chiSq);
+    }
+
+    // Chi-Square PDF f_dof(x)
+    function chiSquarePdf(x, dof) {
+      if (x <= 0) return dof === 2 ? 0.5 : 0.0;
+      const k = 0.5 * dof;
+      const logVal = (k - 1) * Math.log(x) - 0.5 * x - k * Math.LN2 - logGamma(k);
+      return Math.exp(logVal);
+    }
+
+    // Inverse upper tail: find x such that P(ChiSq_dof >= x) = alpha via bracketed bisection
+    function chiSquareCriticalValue(alpha, dof) {
+      let low = 0.0;
+      let high = Math.max(10.0, dof * 4.0);
+      while (chiSquarePValue(high, dof) > alpha) {
+        high *= 2.0;
+      }
+      for (let iter = 0; iter < 80; iter++) {
+        const mid = 0.5 * (low + high);
+        if (chiSquarePValue(mid, dof) > alpha) {
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+      return 0.5 * (low + high);
+    }
+
+    /* -------------------------------------------------------------
+       3. Curated Bivariate Datasets (X, F)
+       ------------------------------------------------------------- */
+    function expandCountsToPairs(rowNames, colNames, matrix) {
+      const pairs = [];
+      for (let i = 0; i < rowNames.length; i++) {
+        for (let j = 0; j < colNames.length; j++) {
+          const count = matrix[i][j];
+          for (let k = 0; k < count; k++) {
+            pairs.push(`${rowNames[i]}, ${colNames[j]}`);
+          }
+        }
+      }
+      // Deterministic shuffle so raw dataset looks like realistic sequential observations
+      let seed = 42;
+      for (let i = pairs.length - 1; i > 0; i--) {
+        seed = (seed * 1664525 + 1013904223) % 4294967296;
+        const j = seed % (i + 1);
+        const tmp = pairs[i];
+        pairs[i] = pairs[j];
+        pairs[j] = tmp;
+      }
+      return pairs.join("\n");
+    }
+
+    const PRESET_DATASETS = {
+      confounding: {
+        title: "Confounding Variable Example: Ice Cream Sales (X) vs. Beach Rescues (F)",
+        note: "<strong>Confounding Case:</strong> Strong statistical dependence between Ice Cream Sales ($X$) and Beach Rescue Incidents ($F$). Both variables are driven by an unobserved seasonal factor (summer heat), illustrating why statistical association does not prove direct causality.",
+        rawText: expandCountsToPairs(
+          ["Low Sales", "Medium Sales", "High Sales"],
+          ["No Rescue", "Rescue Alert"],
+          [
+            [52, 4],
+            [38, 14],
+            [18, 34]
+          ]
+        )
+      },
+      independent: {
+        title: "Probabilistic Independence: Coin Flip (X) vs. Fair Die Parity (F)",
+        note: "<strong>True Independence Case:</strong> Two physically uncoupled random experiments ($X \\in \\{\\text{Heads}, \\text{Tails}\\}$, $F \\in \\{\\text{Even}, \\text{Odd}\\}$). Conditional frequencies $f_{j\\mid i}$ closely match marginal frequencies $f_{\\bullet j}$, yielding a small $\\chi^2$ and $p > \\alpha$.",
+        rawText: expandCountsToPairs(
+          ["Heads", "Tails"],
+          ["Even Roll", "Odd Roll"],
+          [
+            [49, 51],
+            [52, 48]
+          ]
+        )
+      },
+      education: {
+        title: "Academic Study: Study Strategy (X) vs. Exam Grade (F)",
+        note: "<strong>Multi-Category Dependence ($3 \\times 3$):</strong> Evaluates whether exam performance ($F$) depends on study strategy ($X$). Inspecting conditional row distributions reveals substantial shifts toward Distinction for active lab practice.",
+        rawText: expandCountsToPairs(
+          ["Passive Reading", "Group Review", "Active Lab"],
+          ["Fail", "Pass", "Distinction"],
+          [
+            [24, 30, 6],
+            [12, 36, 12],
+            [5,  25, 30]
+          ]
+        )
+      },
+      simulated_indep: {
+        title: "Synthetic Bivariate Sample Under Null Hypothesis",
+        note: "<strong>Synthetic Independent Sample:</strong> Generated from independent marginal distributions $P(X)$ and $P(F)$. Minor sampling fluctuations produce a non-zero $\\chi^2_{\\text{obs}}$ that remains well below the critical threshold $\\chi^2_{1-\\alpha, \\nu}$.",
+        rawText: expandCountsToPairs(
+          ["Group A", "Group B", "Group C"],
+          ["Outcome 1", "Outcome 2"],
+          [
+            [28, 12],
+            [42, 18],
+            [35, 15]
+          ]
+        )
+      }
+    };
+
+    /* -------------------------------------------------------------
+       4. Core Contingency Table & Statistical Engine
+       ------------------------------------------------------------- */
+    let currentAnalysis = null;
+    let matrixViewMode = "observed";
+    let conditionalChart = null;
+
+    const rawDatasetInput = document.getElementById("rawDatasetInput");
+    const datasetErrorBox = document.getElementById("datasetErrorBox");
+    const datasetContextNote = document.getElementById("datasetContextNote");
+    const badgeSampleSize = document.getElementById("badgeSampleSize");
+    const selectAlpha = document.getElementById("selectAlpha");
+
+    function parseAndAnalyzeBivariateDataset(rawText, alpha) {
+      const lines = rawText.split(/\r?\n/);
+      const pairs = [];
+      const rowSet = new Set();
+      const colSet = new Set();
+
+      for (let idx = 0; idx < lines.length; idx++) {
+        const line = lines[idx].trim();
+        if (!line || line.startsWith("#")) continue;
+
+        // Split by comma, semicolon, or tab
+        const parts = line.split(/[,;\t]+/).map(s => s.trim()).filter(Boolean);
+        if (parts.length < 2) {
+          return { error: `Line ${idx + 1} invalid: expected two values "(x, f)", found "${line}".` };
+        }
+        const xVal = parts[0];
+        const fVal = parts[1];
+        pairs.push([xVal, fVal]);
+        rowSet.add(xVal);
+        colSet.add(fVal);
+      }
+
+      if (pairs.length < 4) {
+        return { error: "Dataset requires at least 4 valid bivariate observations (X, F)." };
+      }
+
+      const rowLabels = Array.from(rowSet);
+      const colLabels = Array.from(colSet);
+      const R = rowLabels.length;
+      const C = colLabels.length;
+
+      if (R < 2 || C < 2) {
+        return { error: `Contingency table requires at least 2 categories per variable (found R=${R}, C=${C}).` };
+      }
+
+      const rowIndex = new Map(rowLabels.map((lbl, i) => [lbl, i]));
+      const colIndex = new Map(colLabels.map((lbl, j) => [lbl, j]));
+
+      // Initialize R x C observed count matrix O_ij
+      const O = Array.from({ length: R }, () => Array(C).fill(0));
+      for (const [xVal, fVal] of pairs) {
+        O[rowIndex.get(xVal)][colIndex.get(fVal)] += 1;
+      }
+
+      const N = pairs.length;
+      const rowTotals = O.map(row => row.reduce((acc, v) => acc + v, 0));
+      const colTotals = Array.from({ length: C }, (_, j) =>
+        O.reduce((acc, row) => acc + row[j], 0)
+      );
+
+      // Joint relative frequencies f_ij = O_ij / N
+      const jointRel = O.map(row => row.map(val => val / N));
+      const rowMargRel = rowTotals.map(rt => rt / N);
+      const colMargRel = colTotals.map(ct => ct / N);
+
+      // Conditional frequencies:
+      // Row conditional: P(F = f_j | X = x_i) = O_ij / n_{i.}
+      const condRow = O.map((row, i) => row.map(val => val / rowTotals[i]));
+      // Column conditional: P(X = x_i | F = f_j) = O_ij / n_{.j}
+      const condCol = O.map(row => row.map((val, j) => val / colTotals[j]));
+
+      // Expected frequencies under independence: E_ij = (n_{i.} * n_{.j}) / N
+      const E = Array.from({ length: R }, (_, i) =>
+        Array.from({ length: C }, (__, j) => (rowTotals[i] * colTotals[j]) / N)
+      );
+
+      // Cell Chi-Square contributions and Pearson residuals
+      let chiSq = 0.0;
+      let hasSmallExpected = false;
+      const chiSqCells = Array.from({ length: R }, () => Array(C).fill(0));
+      const residuals = Array.from({ length: R }, () => Array(C).fill(0));
+
+      for (let i = 0; i < R; i++) {
+        for (let j = 0; j < C; j++) {
+          const eVal = E[i][j];
+          if (eVal < 5.0) hasSmallExpected = true;
+          const diff = O[i][j] - eVal;
+          const contrib = (diff * diff) / eVal;
+          chiSqCells[i][j] = contrib;
+          residuals[i][j] = diff / Math.sqrt(eVal);
+          chiSq += contrib;
+        }
+      }
+
+      const dof = (R - 1) * (C - 1);
+      const pValue = chiSquarePValue(chiSq, dof);
+      const critVal = chiSquareCriticalValue(alpha, dof);
+      const minDim = Math.min(R - 1, C - 1);
+      const cramersV = Math.sqrt(chiSq / (N * minDim));
+      const isDependent = pValue < alpha;
+
+      return {
+        error: null,
+        R,
+        C,
+        N,
+        rowLabels,
+        colLabels,
+        O,
+        E,
+        rowTotals,
+        colTotals,
+        jointRel,
+        rowMargRel,
+        colMargRel,
+        condRow,
+        condCol,
+        chiSqCells,
+        residuals,
+        chiSq,
+        dof,
+        pValue,
+        critVal,
+        cramersV,
+        alpha,
+        isDependent,
+        hasSmallExpected
+      };
+    }
+
+    /* -------------------------------------------------------------
+       5. UI Rendering Functions
+       ------------------------------------------------------------- */
+    const MATRIX_MODE_DESCRIPTIONS = {
+      observed: "Displaying observed counts $O_{ij}$ alongside expected independence counts $(E_{ij})$ and marginal totals.",
+      joint: "Displaying empirical joint relative frequencies $f_{ij} = O_{ij}/N$ and marginal relative frequencies $f_{i\\bullet}, f_{\\bullet j}$.",
+      condRow: "Displaying row conditional frequencies $f_{j\\mid i} = P(F = f_j \\mid X = x_i)$. Under independence, every row matches the bottom marginal profile $f_{\\bullet j}$.",
+      condCol: "Displaying column conditional frequencies $f_{i\\mid j} = P(X = x_i \\mid F = f_j)$. Under independence, every column matches the right marginal profile $f_{i\\bullet}$.",
+      expected: "Displaying expected frequencies under independence $E_{ij} = \\frac{n_{i\\bullet} \\cdot n_{\\bullet j}}{N}$.",
+      chisq: "Displaying individual cell contributions $\\chi^2_{ij} = \\frac{(O_{ij} - E_{ij})^2}{E_{ij}}$ summing to $\\chi^2_{\\text{obs}}$."
+    };
+
+    function renderContingencyTable(data) {
+      const table = document.getElementById("contingencyTable");
+      const caption = document.getElementById("matrixModeCaption");
+      caption.innerHTML = MATRIX_MODE_DESCRIPTIONS[matrixViewMode];
+
+      let html = `<thead><tr class="bg-neutral-50 border-b border-neutral-300 text-neutral-700">`;
+      html += `<th class="py-2 px-3 border-r border-neutral-200 font-bold">X \\ F</th>`;
+      data.colLabels.forEach(col => {
+        html += `<th class="py-2 px-3 text-right font-semibold">${escapeHtml(col)}</th>`;
+      });
+
+      const rightHeader = matrixViewMode === "condRow" ? "Row Sum" :
+                          (matrixViewMode === "joint" || matrixViewMode === "condCol") ? "Marginal $f_{i\\bullet}$" :
+                          matrixViewMode === "chisq" ? "Row $\\chi^2_{i\\bullet}$" : "Marginal $n_{i\\bullet}$";
+      html += `<th class="py-2 px-3 text-right border-l border-neutral-300 bg-neutral-100 font-bold">${rightHeader}</th></tr></thead>`;
+
+      html += `<tbody class="divide-y divide-neutral-200">`;
+      for (let i = 0; i < data.R; i++) {
+        html += `<tr class="hover:bg-neutral-50/80">`;
+        html += `<td class="py-2 px-3 font-semibold text-neutral-900 border-r border-neutral-200 bg-neutral-50/40">${escapeHtml(data.rowLabels[i])}</td>`;
+
+        for (let j = 0; j < data.C; j++) {
+          let cellContent = "";
+          if (matrixViewMode === "observed") {
+            cellContent = `<span class="font-bold text-black">${data.O[i][j]}</span> <span class="text-[10px] text-neutral-500">(${data.E[i][j].toFixed(2)})</span>`;
+          } else if (matrixViewMode === "joint") {
+            cellContent = `<span class="font-semibold text-black">${data.jointRel[i][j].toFixed(4)}</span>`;
+          } else if (matrixViewMode === "condRow") {
+            cellContent = `<span class="font-semibold text-black">${(data.condRow[i][j] * 100).toFixed(1)}%</span> <span class="text-[10px] text-neutral-500">(${data.condRow[i][j].toFixed(3)})</span>`;
+          } else if (matrixViewMode === "condCol") {
+            cellContent = `<span class="font-semibold text-black">${(data.condCol[i][j] * 100).toFixed(1)}%</span> <span class="text-[10px] text-neutral-500">(${data.condCol[i][j].toFixed(3)})</span>`;
+          } else if (matrixViewMode === "expected") {
+            cellContent = `<span class="font-semibold text-black">${data.E[i][j].toFixed(2)}</span>`;
+          } else if (matrixViewMode === "chisq") {
+            cellContent = `<span class="font-semibold text-black">${data.chiSqCells[i][j].toFixed(3)}</span>`;
+          }
+          html += `<td class="py-2 px-3 text-right">${cellContent}</td>`;
+        }
+
+        // Right Marginal Cell
+        let rowMargText = "";
+        if (matrixViewMode === "observed" || matrixViewMode === "expected") {
+          rowMargText = `${data.rowTotals[i]}`;
+        } else if (matrixViewMode === "joint" || matrixViewMode === "condCol") {
+          rowMargText = `${data.rowMargRel[i].toFixed(4)}`;
+        } else if (matrixViewMode === "condRow") {
+          rowMargText = `100.0%`;
+        } else if (matrixViewMode === "chisq") {
+          const rSum = data.chiSqCells[i].reduce((a, b) => a + b, 0);
+          rowMargText = `${rSum.toFixed(3)}`;
+        }
+        html += `<td class="py-2 px-3 text-right border-l border-neutral-300 bg-neutral-100/70 font-bold text-neutral-900">${rowMargText}</td>`;
+        html += `</tr>`;
+      }
+      html += `</tbody>`;
+
+      // Bottom Marginal Row
+      const bottomLabel = matrixViewMode === "condCol" ? "Col Sum" :
+                          (matrixViewMode === "joint" || matrixViewMode === "condRow") ? "Marginal $f_{\\bullet j}$" :
+                          matrixViewMode === "chisq" ? "Col $\\chi^2_{\\bullet j}$" : "Marginal $n_{\\bullet j}$";
+
+      html += `<tfoot><tr class="border-t-2 border-neutral-300 bg-neutral-100 font-bold text-neutral-900">`;
+      html += `<td class="py-2 px-3 border-r border-neutral-300">${bottomLabel}</td>`;
+
+      for (let j = 0; j < data.C; j++) {
+        let colMargText = "";
+        if (matrixViewMode === "observed" || matrixViewMode === "expected") {
+          colMargText = `${data.colTotals[j]}`;
+        } else if (matrixViewMode === "joint") {
+          colMargText = `${data.colMargRel[j].toFixed(4)}`;
+        } else if (matrixViewMode === "condRow") {
+          colMargText = `${(data.colMargRel[j] * 100).toFixed(1)}%`;
+        } else if (matrixViewMode === "condCol") {
+          colMargText = `100.0%`;
+        } else if (matrixViewMode === "chisq") {
+          const cSum = data.chiSqCells.reduce((acc, r) => acc + r[j], 0);
+          colMargText = `${cSum.toFixed(3)}`;
+        }
+        html += `<td class="py-2 px-3 text-right">${colMargText}</td>`;
+      }
+
+      let grandTotalText = "";
+      if (matrixViewMode === "observed" || matrixViewMode === "expected") {
+        grandTotalText = `N = ${data.N}`;
+      } else if (matrixViewMode === "joint") {
+        grandTotalText = `1.0000`;
+      } else if (matrixViewMode === "condRow" || matrixViewMode === "condCol") {
+        grandTotalText = `100.0%`;
+      } else if (matrixViewMode === "chisq") {
+        grandTotalText = `χ² = ${data.chiSq.toFixed(3)}`;
+      }
+      html += `<td class="py-2 px-3 text-right border-l border-neutral-300 bg-neutral-200/70 text-black">${grandTotalText}</td>`;
+      html += `</tr></tfoot>`;
+
+      table.innerHTML = html;
+      renderDynamicMath(table);
+      renderDynamicMath(caption);
+    }
+
+    function renderCellBreakdown(data) {
+      const tbody = document.getElementById("cellBreakdownBody");
+      tbody.innerHTML = "";
+
+      for (let i = 0; i < data.R; i++) {
+        for (let j = 0; j < data.C; j++) {
+          const tr = document.createElement("tr");
+          tr.className = "hover:bg-neutral-50";
+          const res = data.residuals[i][j];
+          const resSign = res >= 0 ? "+" : "";
+          tr.innerHTML = `
+            <td class="py-1.5 px-2 font-medium text-neutral-900">(${escapeHtml(data.rowLabels[i])}, ${escapeHtml(data.colLabels[j])})</td>
+            <td class="py-1.5 px-2 text-black font-semibold">${data.O[i][j]}</td>
+            <td class="py-1.5 px-2 text-neutral-600">${data.E[i][j].toFixed(2)}</td>
+            <td class="py-1.5 px-2 text-neutral-700">${resSign}${res.toFixed(2)}</td>
+            <td class="py-1.5 px-2 text-black font-semibold">${data.chiSqCells[i][j].toFixed(4)}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+    }
+
+    function updateHypothesisSummary(data) {
+      badgeSampleSize.textContent = `N = ${data.N} (${data.R}×${data.C})`;
+      document.getElementById("statChiSq").textContent = data.chiSq.toFixed(4);
+      document.getElementById("statDof").textContent = `${data.dof}  [(${data.R}-1)(${data.C}-1)]`;
+      document.getElementById("statCritVal").textContent = data.critVal.toFixed(4);
+      document.getElementById("statPVal").textContent = data.pValue < 1e-4 ? data.pValue.toExponential(3) : data.pValue.toFixed(5);
+      document.getElementById("statCramersV").textContent = data.cramersV.toFixed(4);
+
+      const decisionHeadline = document.getElementById("decisionHeadline");
+      const decisionDetail = document.getElementById("decisionDetail");
+      const decisionBox = document.getElementById("decisionBox");
+      const cochranWarning = document.getElementById("cochranWarning");
+
+      if (data.hasSmallExpected) {
+        cochranWarning.classList.remove("hidden");
+      } else {
+        cochranWarning.classList.add("hidden");
+      }
+
+      const strengthLabel = data.cramersV < 0.1 ? "negligible" :
+                            data.cramersV < 0.3 ? "weak-to-moderate" :
+                            data.cramersV < 0.5 ? "moderate-to-strong" : "strong";
+
+      if (data.isDependent) {
+        decisionBox.className = "mt-3 p-3 rounded-lg bg-neutral-100 border border-black text-xs leading-relaxed text-neutral-900";
+        decisionHeadline.textContent = `Decision: Reject H₀ — Variables are Statistically Dependent (p < ${data.alpha})`;
+        decisionDetail.innerHTML = `Since $\\chi^2_{\\text{obs}} = ${data.chiSq.toFixed(3)} > \\chi^2_{1-\\alpha, ${data.dof}} = ${data.critVal.toFixed(3)}$, observed joint frequencies deviate significantly from independence ($V = ${data.cramersV.toFixed(3)}$, ${strengthLabel} association). <strong>Note:</strong> This confirms statistical association, not direct causality.`;
+      } else {
+        decisionBox.className = "mt-3 p-3 rounded-lg bg-neutral-50 border border-neutral-300 text-xs leading-relaxed text-neutral-800";
+        decisionHeadline.textContent = `Decision: Fail to Reject H₀ — Consistent with Independence (p ≥ ${data.alpha})`;
+        decisionDetail.innerHTML = `Since $\\chi^2_{\\text{obs}} = ${data.chiSq.toFixed(3)} \\le \\chi^2_{1-\\alpha, ${data.dof}} = ${data.critVal.toFixed(3)}$, observed discrepancies are consistent with random sampling variation under $P(X, F) = P(X)P(F)$.`;
+      }
+
+      renderDynamicMath(decisionDetail);
+      renderDynamicMath(cochranWarning);
+    }
+
+    /* -------------------------------------------------------------
+       6. Conditional Profile Bar Chart (Chart.js)
+       ------------------------------------------------------------- */
+    function updateConditionalChart(data) {
+      const ctx = document.getElementById("conditionalChart").getContext("2d");
+      if (conditionalChart) {
+        conditionalChart.destroy();
+      }
+
+      // Monochrome grayscale palette for crisp black-on-white aesthetics
+      const grays = ["#111827", "#4b5563", "#9ca3af", "#d1d5db", "#374151", "#6b7280"];
+
+      const datasets = data.rowLabels.map((rowLbl, i) => ({
+        label: `P(F | X = ${rowLbl})`,
+        data: data.condRow[i].map(v => +(v * 100).toFixed(2)),
+        backgroundColor: grays[i % grays.length],
+        borderColor: "#000000",
+        borderWidth: 1,
+        borderRadius: 3
+      }));
+
+      // Add Marginal Profile P(F) as reference comparison bar
+      datasets.push({
+        label: "Marginal P(F)",
+        data: data.colMargRel.map(v => +(v * 100).toFixed(2)),
+        backgroundColor: "#ffffff",
+        borderColor: "#000000",
+        borderWidth: 2,
+        borderDash: [4, 4],
+        borderRadius: 3
+      });
+
+      conditionalChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: data.colLabels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: "#111827", font: { family: "monospace", size: 11 } }
+            },
+            y: {
+              beginAtZero: true,
+              max: 100,
+              grid: { color: "#f3f4f6" },
+              title: {
+                display: true,
+                text: "Conditional / Marginal Probability (%)",
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              },
+              ticks: {
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 },
+                callback: (val) => `${val}%`
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#111827",
+                font: { family: "monospace", size: 10 }
+              }
+            },
+            tooltip: {
+              backgroundColor: "#ffffff",
+              titleColor: "#000000",
+              bodyColor: "#374151",
+              borderColor: "#d1d5db",
+              borderWidth: 1,
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /* -------------------------------------------------------------
+       7. Chi-Square Sampling Distribution Canvas
+       ------------------------------------------------------------- */
+    function drawChiSquareDistribution(data) {
+      const canvas = document.getElementById("chiSqCanvas");
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const width = rect.width;
+      const height = rect.height;
+      const pad = { top: 28, right: 28, bottom: 34, left: 46 };
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+
+      const dof = data.dof;
+      const xMax = Math.max(data.critVal * 1.45, Math.min(data.chiSq * 1.25, dof * 6 + 15), dof + 10);
+      const xMin = 0.0;
+
+      // Determine yMax cleanly
+      let yMax = 0.1;
+      const probeStart = dof <= 2 ? 0.05 : Math.max(0.05, dof - 2);
+      for (let i = 1; i <= 200; i++) {
+        const tx = xMin + (i / 200) * Math.min(xMax, dof * 3 + 6);
+        const py = chiSquarePdf(tx, dof);
+        if (isFinite(py) && py > yMax) yMax = py;
+      }
+      yMax = Math.min(yMax * 1.18, 1.2);
+
+      const mapX = (x) => pad.left + ((x - xMin) / (xMax - xMin)) * (width - pad.left - pad.right);
+      const mapY = (y) => height - pad.bottom - (Math.min(y, yMax) / yMax) * (height - pad.top - pad.bottom);
+
+      // Horizontal grid lines
+      ctx.strokeStyle = "#f3f4f6";
+      ctx.lineWidth = 1;
+      for (let g = 1; g <= 4; g++) {
+        const yVal = (yMax * g) / 4;
+        const yPos = mapY(yVal);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, yPos);
+        ctx.lineTo(width - pad.right, yPos);
+        ctx.stroke();
+
+        ctx.fillStyle = "#9ca3af";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "right";
+        ctx.fillText(yVal.toFixed(2), pad.left - 6, yPos + 3);
+      }
+
+      // X-axis ticks
+      const tickStep = xMax <= 15 ? 2 : xMax <= 40 ? 5 : 10;
+      for (let tx = 0; tx <= xMax; tx += tickStep) {
+        const xPos = mapX(tx);
+        ctx.beginPath();
+        ctx.moveTo(xPos, pad.top);
+        ctx.lineTo(xPos, height - pad.bottom);
+        ctx.stroke();
+
+        ctx.fillStyle = "#9ca3af";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(tx.toFixed(0), xPos, height - pad.bottom + 14);
+      }
+
+      // Shaded Critical Rejection Region: x >= critVal
+      if (data.critVal < xMax) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.14)";
+        ctx.beginPath();
+        ctx.moveTo(mapX(data.critVal), mapY(0));
+        const steps = 250;
+        for (let i = 0; i <= steps; i++) {
+          const tx = data.critVal + (i / steps) * (xMax - data.critVal);
+          ctx.lineTo(mapX(tx), mapY(chiSquarePdf(tx, dof)));
+        }
+        ctx.lineTo(mapX(xMax), mapY(0));
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Axes
+      ctx.strokeStyle = "#1f2937";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, mapY(0));
+      ctx.lineTo(width - pad.right, mapY(0));
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, height - pad.bottom);
+      ctx.stroke();
+
+      // Chi-Square PDF curve
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      const curveSteps = 350;
+      for (let i = 0; i <= curveSteps; i++) {
+        const tx = xMin + (i / curveSteps) * xMax;
+        const py = chiSquarePdf(tx === 0 ? 1e-4 : tx, dof);
+        const pxCanvas = mapX(tx);
+        const pyCanvas = mapY(py);
+        if (i === 0) ctx.moveTo(pxCanvas, pyCanvas);
+        else ctx.lineTo(pxCanvas, pyCanvas);
+      }
+      ctx.stroke();
+
+      // Critical value vertical marker
+      const critXPos = mapX(data.critVal);
+      ctx.strokeStyle = "#6b7280";
+      ctx.lineWidth = 1.3;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(critXPos, mapY(0));
+      ctx.lineTo(critXPos, pad.top + 18);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Observed Chi-Square vertical marker (clamped to right edge if extreme)
+      const clampedObs = Math.min(data.chiSq, xMax);
+      const obsXPos = mapX(clampedObs);
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([5, 3]);
+      ctx.beginPath();
+      ctx.moveTo(obsXPos, mapY(0));
+      ctx.lineTo(obsXPos, pad.top + 8);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Top status summary inside canvas
+      ctx.fillStyle = "#111827";
+      ctx.font = "bold 11px monospace";
+      ctx.textAlign = "left";
+      const obsLabel = data.chiSq > xMax ? `χ²_obs = ${data.chiSq.toFixed(2)} (off-scale →)` : `χ²_obs = ${data.chiSq.toFixed(3)}`;
+      ctx.fillText(`ν = ${dof}  |  χ²_crit(α=${data.alpha}) = ${data.critVal.toFixed(3)}  |  ${obsLabel}`, pad.left + 8, pad.top + 12);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    /* -------------------------------------------------------------
+       8. Event Handlers & Application Lifecycle
+       ------------------------------------------------------------- */
+    function runAnalysisPipeline() {
+      const alpha = parseFloat(selectAlpha.value) || 0.05;
+      const result = parseAndAnalyzeBivariateDataset(rawDatasetInput.value, alpha);
+
+      if (result.error) {
+        datasetErrorBox.textContent = result.error;
+        datasetErrorBox.classList.remove("hidden");
+        return;
+      }
+
+      datasetErrorBox.classList.add("hidden");
+      currentAnalysis = result;
+
+      renderContingencyTable(result);
+      renderCellBreakdown(result);
+      updateHypothesisSummary(result);
+      updateConditionalChart(result);
+      drawChiSquareDistribution(result);
+    }
+
+    function loadPreset(presetKey) {
+      const preset = PRESET_DATASETS[presetKey];
+      if (!preset) return;
+      rawDatasetInput.value = preset.rawText;
+      datasetContextNote.innerHTML = preset.note;
+      renderDynamicMath(datasetContextNote);
+      runAnalysisPipeline();
+    }
+
+    // Preset selector buttons
+    document.querySelectorAll(".dataset-preset-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".dataset-preset-btn").forEach(b => {
+          b.classList.remove("border-black", "bg-neutral-100", "font-bold");
+          b.classList.add("border-neutral-200", "bg-neutral-50");
+        });
+        btn.classList.remove("border-neutral-200", "bg-neutral-50");
+        btn.classList.add("border-black", "bg-neutral-100", "font-bold");
+        loadPreset(btn.getAttribute("data-preset"));
+      });
+    });
+
+    // Matrix view mode buttons
+    document.querySelectorAll(".matrix-mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".matrix-mode-btn").forEach(b => {
+          b.classList.remove("border-black", "bg-black", "text-white");
+          b.classList.add("border-neutral-200", "bg-neutral-50", "text-neutral-800");
+        });
+        btn.classList.remove("border-neutral-200", "bg-neutral-50", "text-neutral-800");
+        btn.classList.add("border-black", "bg-black", "text-white");
+        matrixViewMode = btn.getAttribute("data-mode");
+        if (currentAnalysis) {
+          renderContingencyTable(currentAnalysis);
+        }
+      });
+    });
+
+    // Parse & Compute button
+    document.getElementById("btnParseDataset").addEventListener("click", () => {
+      datasetContextNote.innerHTML = "<strong>Custom Bivariate Dataset:</strong> User-defined observations $(x_k, f_k)$ aggregated programmatically into an $R \\times C$ contingency table.";
+      renderDynamicMath(datasetContextNote);
+      runAnalysisPipeline();
+    });
+
+    // Append 10 random observations matching existing categories
+    document.getElementById("btnAppendRandom").addEventListener("click", () => {
+      if (!currentAnalysis) return;
+      const { rowLabels, colLabels } = currentAnalysis;
+      const extraLines = [];
+      for (let k = 0; k < 10; k++) {
+        const r = rowLabels[Math.floor(Math.random() * rowLabels.length)];
+        const c = colLabels[Math.floor(Math.random() * colLabels.length)];
+        extraLines.push(`${r}, ${c}`);
+      }
+      const trimmed = rawDatasetInput.value.trim();
+      rawDatasetInput.value = trimmed ? `${trimmed}\n${extraLines.join("\n")}` : extraLines.join("\n");
+      runAnalysisPipeline();
+    });
+
+    selectAlpha.addEventListener("change", () => {
+      runAnalysisPipeline();
+    });
+
+    window.addEventListener("resize", () => {
+      if (currentAnalysis) {
+        drawChiSquareDistribution(currentAnalysis);
+      }
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      loadPreset("confounding");
+      initKaTeX();
+    });
+  </script>
+</body>
+</html>
