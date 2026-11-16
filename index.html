@@ -55,7 +55,37 @@
 
     <!-- VISTA ROOT: ELENCO CARTELLE -->
     <div id="view-root" class="w-full space-y-4">
-
+  <!-- CARTELLA HW6 -->
+      <div 
+        onclick="navigate('homework6')"
+        class="w-full text-left group bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl p-6 shadow-xs hover:shadow-md transition-all duration-200 flex items-center justify-between cursor-pointer focus:outline-none"
+      >
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 transition-transform duration-200 group-hover:scale-105">
+            <svg class="w-6 h-6 fill-current" viewBox="0 0 20 20">
+              <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                homework6
+              </h2>
+              <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-mono font-medium">
+                folder
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5 font-mono">
+              1 item • Click to open
+            </p>
+          </div>
+        </div>
+        <div class="w-8 h-8 rounded-full bg-slate-50 group-hover:bg-indigo-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
       <!-- CARTELLA HW5 -->
       <div 
         onclick="navigate('homework5')"
@@ -121,7 +151,41 @@
       </div>
 
     </div>
-
+  <!-- VISTA DENTRO HW6 -->
+    <div id="view-homework6" class="hidden space-y-4">
+      <a 
+        href="./riemann_vs_lebesgue_integration.html"
+        class="block bg-white rounded-xl border border-slate-200 hover:border-indigo-400 p-6 shadow-xs hover:shadow-md transition-all duration-200 group"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+              statistical independence
+            </h2>
+           
+          </div>
+          <svg class="w-5 h-5 text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </a>
+       <a 
+        href="./statistical_independence_contingency_analysis.html"
+        class="block bg-white rounded-xl border border-slate-200 hover:border-indigo-400 p-6 shadow-xs hover:shadow-md transition-all duration-200 group"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+             Statistical Independence Contingency Analysis
+            </h2>
+          
+          </div>
+          <svg class="w-5 h-5 text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </a>
+    </div>
     <!-- VISTA DENTRO HW5 -->
     <div id="view-homework5" class="hidden space-y-4">
       <a 
@@ -203,6 +267,7 @@
       const rootEl = document.getElementById('view-root');
       const hw4El = document.getElementById('view-homework4');
       const hw5El = document.getElementById('view-homework5');
+       const hw6El = document.getElementById('view-homework6');
       const bRoot = document.getElementById('breadcrumb-root');
       const bFolder = document.getElementById('breadcrumb-folder');
       const bCurrent = document.getElementById('breadcrumb-current-folder');
@@ -212,6 +277,7 @@
       rootEl.classList.add('hidden');
       hw4El.classList.add('hidden');
       hw5El.classList.add('hidden');
+       hw6El.classList.add('hidden');
       bRoot.classList.add('hidden');
       bFolder.classList.remove('flex');
       bFolder.classList.add('hidden');
@@ -240,6 +306,18 @@
           homework4
         `;
         badge.innerText = '2 exercises';
+        badge.classList.remove('hidden');
+        } else if (hash === '#homework6') {
+        hw4El.classList.remove('hidden');
+        bFolder.classList.remove('hidden');
+        bFolder.classList.add('flex');
+        bCurrent.innerHTML = `
+          <svg class="w-4 h-4 text-amber-500 fill-current" viewBox="0 0 20 20">
+            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
+          </svg>
+          homework6
+        `;
+        badge.innerText = '1 exercises';
         badge.classList.remove('hidden');
       } else {
         rootEl.classList.remove('hidden');
