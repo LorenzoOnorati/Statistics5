@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conditional Probability, Bayes' Theorem &amp; Statistical Inference</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for Prior, Likelihood, Posterior & Sequential Updating plots -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- KaTeX for mathematical typesetting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script>
+    function renderMathInContainer(el) {
+      if (window.renderMathInElement && el) {
+        window.renderMathInElement(el, {
+          delimiters: [
+            { left: "$$", right: "$$", display: true },
+            { left: "$", right: "$", display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    function renderAllMath() {
+      renderMathInContainer(document.body);
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderAllMath()"></script>
+  <style>
+    body {
+      background-color: #ffffff;
+      color: #111827;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #999;
+    }
+    canvas {
+      display: block;
+    }
+    .katex-display {
+      margin: 0.5em 0 !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scroll selection:bg-neutral-200 selection:text-black">
+
+  <!-- Header -->
+  <header class="border-b border-neutral-200 bg-white/95 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded border border-neutral-300 bg-neutral-100 flex items-center justify-center font-mono font-bold text-black text-base shadow-sm">
+        $P(\theta|D)$
+      </div>
+      <div>
+        <h1 class="text-lg font-semibold tracking-wide text-neutral-900">Conditional Probability, Bayes' Theorem &amp; Statistical Inference</h1>
+        <p class="text-xs text-neutral-500">Prior beliefs $\pi(\theta)$, likelihood $L(\theta; D)$, posterior updating $\pi(\theta \mid D)$, and sequential learning</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center px-2.5 py-1 rounded text-xs font-mono font-medium border border-neutral-300 bg-neutral-50 text-neutral-700">
+        Bayesian Inference &bull; Scientific Lab
+      </span>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Interactive Models, Discrete Bayes & Summary Metrics (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+
+      <!-- Card 1: Continuous Conjugate Model (Beta-Binomial Updating) -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-black"></span>
+            1. Conjugate Beta–Binomial Model
+          </h2>
+          <button id="btnSimulateBatch" class="px-2.5 py-1 bg-black hover:bg-neutral-800 text-white rounded text-[11px] font-mono transition shadow-sm" title="Draw 10 new Bernoulli trials from true rate θ_true = 0.65">
+            +10 Trials ($\theta_{\text{true}}=0.65$)
+          </button>
+        </div>
+
+        <!-- Prior Choice Presets -->
+        <div class="mb-3.5">
+          <span class="block text-xs text-neutral-500 mb-1.5">Prior specification $\pi(\theta) = \text{Beta}(\alpha_0, \beta_0)$:</span>
+          <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
+            <button class="prior-preset-btn px-2 py-1.5 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-left transition" data-a="1" data-b="1">
+              Uniform $\text{Beta}(1, 1)$
+            </button>
+            <button class="prior-preset-btn px-2 py-1.5 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-left transition" data-a="0.5" data-b="0.5">
+              Jeffreys $\text{Beta}(0.5, 0.5)$
+            </button>
+            <button class="prior-preset-btn px-2 py-1.5 rounded border border-black font-bold bg-neutral-100 text-left transition" data-a="2" data-b="10">
+              Skeptical $\text{Beta}(2, 10)$
+            </button>
+            <button class="prior-preset-btn px-2 py-1.5 rounded border border-neutral-200 hover:border-black bg-neutral-50 text-left transition" data-a="12" data-b="4">
+              Optimistic $\text{Beta}(12, 4)$
+            </button>
+          </div>
+        </div>
+
+        <!-- Prior Hyperparameters Sliders -->
+        <div class="grid grid-cols-2 gap-3 mb-3.5">
+          <div>
+            <div class="flex justify-between items-center text-xs mb-1">
+              <label for="sliderAlpha0" class="text-neutral-700 font-medium">Prior $\alpha_0$:</label>
+              <span id="labelAlpha0" class="font-mono text-black font-bold bg-neutral-100 border border-neutral-300 px-1.5 py-0.5 rounded text-[11px]">2.0</span>
+            </div>
+            <input type="range" id="sliderAlpha0" min="0.5" max="30" value="2" step="0.5"
+                   class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+          </div>
+          <div>
+            <div class="flex justify-between items-center text-xs mb-1">
+              <label for="sliderBeta0" class="text-neutral-700 font-medium">Prior $\beta_0$:</label>
+              <span id="labelBeta0" class="font-mono text-black font-bold bg-neutral-100 border border-neutral-300 px-1.5 py-0.5 rounded text-[11px]">10.0</span>
+            </div>
+            <input type="range" id="sliderBeta0" min="0.5" max="30" value="10" step="0.5"
+                   class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+          </div>
+        </div>
+
+        <!-- Observed Sample Data (n trials, k successes) -->
+        <div class="pt-3 border-t border-neutral-200 space-y-3">
+          <div>
+            <div class="flex justify-between items-center text-xs mb-1">
+              <label for="sliderTrialsN" class="text-neutral-700 font-medium">Observed sample size $n$:</label>
+              <span id="labelTrialsN" class="font-mono text-black font-bold bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded">20</span>
+            </div>
+            <input type="range" id="sliderTrialsN" min="0" max="250" value="20" step="1"
+                   class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center text-xs mb-1">
+              <label for="sliderSuccessK" class="text-neutral-700 font-medium">Observed successes $k$:</label>
+              <span id="labelSuccessK" class="font-mono text-black font-bold bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded">13 (k/n = 0.650)</span>
+            </div>
+            <input type="range" id="sliderSuccessK" min="0" max="20" value="13" step="1"
+                   class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Prior vs. Likelihood vs. Posterior Decomposition -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase mb-3 flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-black"></span>
+            2. Inference &amp; Shrinkage Diagnostics
+          </span>
+          <span id="badgePosteriorParams" class="text-[10px] text-neutral-700 font-mono bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300 font-semibold">
+            Beta(15.0, 17.0)
+          </span>
+        </h2>
+
+        <div class="space-y-2 text-xs font-mono">
+          <!-- Prior Summary -->
+          <div class="p-2.5 rounded bg-neutral-50 border border-neutral-200 flex justify-between items-center">
+            <div>
+              <span class="text-neutral-900 font-bold block">Prior Mean $\mu_0 = \frac{\alpha_0}{\alpha_0+\beta_0}$:</span>
+              <span class="text-[10px] text-neutral-500">Prior effective sample size $n_0 = \alpha_0 + \beta_0$</span>
+            </div>
+            <div class="text-right">
+              <span id="valPriorMean" class="text-black font-semibold block">0.1667</span>
+              <span id="valPriorEss" class="text-[10px] text-neutral-500">$n_0 = 12.0$</span>
+            </div>
+          </div>
+
+          <!-- Likelihood Summary -->
+          <div class="p-2.5 rounded bg-neutral-50 border border-neutral-200 flex justify-between items-center">
+            <div>
+              <span class="text-neutral-900 font-bold block">Likelihood MLE $\hat{\theta}_{\text{MLE}} = \frac{k}{n}$:</span>
+              <span class="text-[10px] text-neutral-500">Data weight $w_n = \frac{n}{n_0 + n}$</span>
+            </div>
+            <div class="text-right">
+              <span id="valMLE" class="text-black font-semibold block">0.6500</span>
+              <span id="valDataWeight" class="text-[10px] text-neutral-500">$w_n = 62.5\%$</span>
+            </div>
+          </div>
+
+          <!-- Posterior Mean & MAP -->
+          <div class="p-2.5 rounded bg-neutral-100 border border-neutral-300 flex justify-between items-center">
+            <div>
+              <span class="text-neutral-900 font-bold block">Posterior Mean $\mathbb{E}[\theta \mid D]$:</span>
+              <span class="text-[10px] text-neutral-600">Posterior Mode (MAP)</span>
+            </div>
+            <div class="text-right">
+              <span id="valPostMean" class="text-black font-bold text-sm block">0.4688</span>
+              <span id="valPostMap" class="text-[10px] text-neutral-700 font-semibold">MAP = 0.4667</span>
+            </div>
+          </div>
+
+          <!-- 95% Credible Interval -->
+          <div class="p-2.5 rounded bg-neutral-50 border border-neutral-200 flex justify-between items-center">
+            <div>
+              <span class="text-neutral-900 font-bold block">95% Equal-Tailed Credible Interval:</span>
+              <span class="text-[10px] text-neutral-500">$P(\theta \in [L, U] \mid D) = 0.95$</span>
+            </div>
+            <div class="text-right">
+              <span id="valCredibleInt" class="text-black font-semibold block">[0.301, 0.640]</span>
+              <span id="valPostSd" class="text-[10px] text-neutral-500">SD = 0.0869</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="influenceInsightBox" class="mt-3 p-2.5 rounded bg-neutral-50 border border-neutral-300 text-[11px] text-neutral-700 leading-relaxed">
+          Loading prior-likelihood balance analysis...
+        </div>
+      </div>
+
+      <!-- Card 3: Discrete Bayes' Theorem Calculator (Hypothesis Testing / Screening) -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-black"></span>
+            3. Discrete Bayes' Rule Calculator
+          </h2>
+          <span class="text-[10px] font-mono text-neutral-500">Base-Rate &amp; Evidence</span>
+        </div>
+        <p class="text-[11px] text-neutral-500 mb-3 leading-relaxed">
+          Evaluate $P(H \mid D) = \frac{P(D \mid H)P(H)}{P(D \mid H)P(H) + P(D \mid \neg H)P(\neg H)}$ for diagnostic screening, fraud detection, or hypothesis evaluation.
+        </p>
+
+        <!-- Discrete Presets -->
+        <div class="grid grid-cols-3 gap-1.5 mb-3 text-[11px] font-mono">
+          <button class="discrete-preset-btn px-2 py-1 rounded border border-black font-bold bg-neutral-100 transition" data-p="0.01" data-sens="0.95" data-fpr="0.05">
+            Rare Disease (1%)
+          </button>
+          <button class="discrete-preset-btn px-2 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 transition" data-p="0.20" data-sens="0.90" data-fpr="0.02">
+            Spam Filter (20%)
+          </button>
+          <button class="discrete-preset-btn px-2 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 transition" data-p="0.50" data-sens="0.80" data-fpr="0.10">
+            Balanced (50%)
+          </button>
+        </div>
+
+        <div class="space-y-2.5 text-xs mb-3">
+          <div>
+            <div class="flex justify-between mb-0.5">
+              <label for="sliderDiscPrior" class="text-neutral-700">Prior probability $P(H)$:</label>
+              <span id="labelDiscPrior" class="font-mono font-bold">1.0%</span>
+            </div>
+            <input type="range" id="sliderDiscPrior" min="0.001" max="0.90" value="0.01" step="0.001"
+                   class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <div class="flex justify-between mb-0.5">
+                <label for="sliderDiscSens" class="text-neutral-700">Likelihood $P(D \mid H)$:</label>
+                <span id="labelDiscSens" class="font-mono font-bold">95.0%</span>
+              </div>
+              <input type="range" id="sliderDiscSens" min="0.50" max="0.999" value="0.95" step="0.005"
+                     class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+            </div>
+            <div>
+              <div class="flex justify-between mb-0.5">
+                <label for="sliderDiscFpr" class="text-neutral-700">False Pos. $P(D \mid \neg H)$:</label>
+                <span id="labelDiscFpr" class="font-mono font-bold">5.0%</span>
+              </div>
+              <input type="range" id="sliderDiscFpr" min="0.001" max="0.50" value="0.05" step="0.001"
+                     class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+            </div>
+          </div>
+        </div>
+
+        <!-- Discrete Bayes Output Breakdown -->
+        <div class="p-3 rounded-lg bg-neutral-50 border border-neutral-300 font-mono text-[11px] space-y-1.5">
+          <div class="flex justify-between">
+            <span class="text-neutral-600">Marginal Evidence $P(D)$:</span>
+            <span id="valDiscEvidence" class="font-semibold text-neutral-900">0.0590 (5.90%)</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-neutral-600">Bayes Factor $\text{BF}_{10} = \frac{P(D \mid H)}{P(D \mid \neg H)}$:</span>
+            <span id="valDiscBF" class="font-semibold text-neutral-900">19.00</span>
+          </div>
+          <div class="pt-1.5 border-t border-neutral-200 flex justify-between items-center">
+            <span class="text-black font-bold">Posterior $P(H \mid D)$:</span>
+            <span id="valDiscPost" class="text-black font-bold text-sm">16.10%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Visual Charts & Theoretical Foundations (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-6">
+
+      <!-- Chart 1: Prior vs. Normalized Likelihood vs. Posterior Density -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+              Bayesian Updating: Prior $\pi(\theta)$, Likelihood $L(\theta; D)$ &amp; Posterior $\pi(\theta \mid D)$
+            </h2>
+            <p class="text-xs text-neutral-500">
+              Visualizing $\pi(\theta \mid D) \propto L(\theta; D) \cdot \pi(\theta)$: the posterior compromises between prior belief and sample likelihood
+            </p>
+          </div>
+          <span class="text-xs font-mono text-neutral-600 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded">
+            Continuous Parameter $\theta \in [0, 1]$
+          </span>
+        </div>
+
+        <div class="relative w-full h-64">
+          <canvas id="bayesDensityChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Sequential Updating & Asymptotic Dominance of Data -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+              Sequential Updating &amp; Asymptotic Posterior Concentration around the MLE
+            </h2>
+            <p class="text-xs text-neutral-500">
+              Under regularity conditions, as sample size $n$ grows, $\mathbb{E}[\theta \mid D_n] = (1 - w_n)\mu_0 + w_n \hat{\theta}_{\text{MLE}}$ concentrates around $\hat{\theta}_{\text{MLE}}$ and the 95% credible band narrows as $\mathcal{O}(n^{-1/2})$
+            </p>
+          </div>
+          <span class="text-xs font-mono text-neutral-600 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded">
+            Posterior Trajectory
+          </span>
+        </div>
+
+        <div class="relative w-full h-56">
+          <canvas id="sequentialChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Theoretical Foundations, Examples, Advantages & Limitations -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm space-y-4">
+        <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+          Theoretical Foundations, Worked Examples &amp; Critical Evaluation
+        </h2>
+
+        <!-- Section A: Conditional Probability & Bayes' Theorem -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-neutral-700">
+          <div class="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200">
+            <h3 class="font-bold text-black mb-1.5 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-black rounded-full"></span>
+              Conditional Probability: Probability vs. Statistics
+            </h3>
+            <p class="mb-2 text-neutral-600">
+              In Kolmogorov's <strong>probability theory</strong>, for events $A, B \in \mathcal{F}$ with $P(B) > 0$, conditioning restricts the sample space to $B$:
+            </p>
+            <div class="my-1.5 p-1.5 bg-white border border-neutral-300 rounded text-center">
+              $$P(A \mid B) = \frac{P(A \cap B)}{P(B)}$$
+            </div>
+            <p class="text-neutral-600">
+              In <strong>frequentist statistics</strong>, parameters $\theta$ are fixed unknown constants, so probability applies only to data sampling distributions $f(D \mid \theta)$. <strong>Bayesian statistics</strong> treats $\theta$ as a random variable with epistemic distribution $\pi(\theta)$, allowing Bayes' theorem to invert the conditioning from $f(D \mid \theta)$ to $\pi(\theta \mid D)$.
+            </p>
+          </div>
+
+          <div class="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200">
+            <h3 class="font-bold text-black mb-1.5 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-neutral-500 rounded-full"></span>
+              Bayes' Theorem &amp; The Three Components
+            </h3>
+            <p class="mb-1.5 text-neutral-600">
+              Combining the multiplication rule $f(D, \theta) = f(D \mid \theta)\pi(\theta) = \pi(\theta \mid D)m(D)$ yields:
+            </p>
+            <div class="my-1.5 p-1.5 bg-white border border-neutral-300 rounded text-center font-semibold">
+              $$\pi(\theta \mid D) = \frac{L(\theta; D)\,\pi(\theta)}{\int_{\Theta} L(\vartheta; D)\,\pi(\vartheta)\,d\vartheta}$$
+            </div>
+            <ul class="list-disc list-inside space-y-1 text-neutral-600 mt-1.5">
+              <li><strong>Prior $\pi(\theta)$:</strong> Pre-data belief distribution on $\Theta$.</li>
+              <li><strong>Likelihood $L(\theta; D) = f(D \mid \theta)$:</strong> Plausibility of $\theta$ given fixed observed data $D$ (not a density in $\theta$).</li>
+              <li><strong>Posterior $\pi(\theta \mid D)$:</strong> Normalized product updating belief via evidence $m(D) = \int_\Theta L(\vartheta; D)\pi(\vartheta)\,d\vartheta$.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Section B: Why Sequential Updating is Central -->
+        <div class="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200 text-xs text-neutral-700 leading-relaxed">
+          <h3 class="font-bold text-black mb-1.5 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-black rounded-full"></span>
+            Coherent Sequential Updating &amp; Worked Examples
+          </h3>
+          <p class="text-neutral-600 mb-2">
+            When conditionally independent datasets $D_1, D_2$ arrive sequentially, using the first posterior $\pi(\theta \mid D_1)$ as the prior for $D_2$ yields the exact same inference as batch conditioning:
+            $$\pi(\theta \mid D_1, D_2) \propto f(D_2 \mid \theta)\,\pi(\theta \mid D_1) \propto f(D_2 \mid \theta)f(D_1 \mid \theta)\,\pi(\theta) = f(D_1, D_2 \mid \theta)\,\pi(\theta)$$
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] text-neutral-600">
+            <div class="bg-white p-2.5 rounded border border-neutral-200">
+              <strong class="text-black block mb-1">Example 1: Beta–Binomial Proportion Estimation</strong>
+              For $k$ successes in $n$ trials with prior $\text{Beta}(\alpha_0, \beta_0)$, the posterior is $\text{Beta}(\alpha_0 + k, \beta_0 + n - k)$. Its mean is a precision-weighted average:
+              $$\mathbb{E}[\theta \mid D] = \frac{n_0}{n_0 + n}\mu_0 + \frac{n}{n_0 + n}\hat{\theta}_{\text{MLE}}, \quad n_0 = \alpha_0 + \beta_0$$
+            </div>
+            <div class="bg-white p-2.5 rounded border border-neutral-200">
+              <strong class="text-black block mb-1">Example 2: Normal–Normal Precision Updating</strong>
+              For observations $\bar{x}$ with known variance $\sigma^2$ and prior $\theta \sim \mathcal{N}(\mu_0, \tau_0^2)$, posterior precision equals prior precision plus data precision:
+              $$\frac{1}{\tau_n^2} = \frac{1}{\tau_0^2} + \frac{n}{\sigma^2}, \qquad \mu_n = \tau_n^2\left(\frac{\mu_0}{\tau_0^2} + \frac{n\bar{x}}{\sigma^2}\right)$$
+            </div>
+          </div>
+        </div>
+
+        <!-- Section C: Advantages & Limitations Table -->
+        <div class="overflow-x-auto border border-neutral-200 rounded-lg">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-neutral-300 bg-neutral-50 text-neutral-800 font-mono text-[11px]">
+                <th class="py-2 px-3 w-1/2">Advantages of Bayesian Inference</th>
+                <th class="py-2 px-3 w-1/2">Limitations &amp; Methodological Caveats</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-200 text-neutral-600 text-[11px] leading-relaxed">
+              <tr>
+                <td class="py-2 px-3 align-top">
+                  <strong>Direct Probabilistic Statements:</strong> Yields a full posterior distribution $\pi(\theta \mid D)$ and credible intervals $P(a \le \theta \le b \mid D) = 0.95$, directly answering questions about parameter uncertainty.
+                </td>
+                <td class="py-2 px-3 align-top">
+                  <strong>Prior Sensitivity in Small Samples:</strong> When $n$ is small ($n \lesssim n_0$), subjective or poorly calibrated priors can heavily bias conclusions toward $\mu_0$.
+                </td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 align-top">
+                  <strong>Regularization &amp; Hierarchical Modeling:</strong> Informative priors prevent extreme overfitting (e.g., when $k = 0$ or $k = n$ in small samples, avoiding $\hat{\theta}_{\text{MLE}} \in \{0, 1\}$).
+                </td>
+                <td class="py-2 px-3 align-top">
+                  <strong>Cromwell's Rule (Zero-Prior Trap):</strong> If $\pi(\theta) = 0$ on a subset of $\Theta$, no finite sample size can ever overturn that zero probability ($0 \times L(\theta; D) = 0$).
+                </td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 align-top">
+                  <strong>Asymptotic Consistency (Bernstein–von Mises):</strong> Under suitable regularity conditions, posterior inference becomes increasingly dominated by the data as $n \to \infty$, and the posterior converges to $\mathcal{N}(\hat{\theta}_{\text{MLE}}, \mathcal{I}(\theta_0)^{-1}/n)$.
+                </td>
+                <td class="py-2 px-3 align-top">
+                  <strong>Computational Intractability:</strong> Outside conjugate families, evaluating the marginal evidence $m(D) = \int_\Theta L(\vartheta; D)\pi(\vartheta)\,d\vartheta$ in high dimensions requires MCMC or Variational Inference.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-neutral-200 py-4 px-6 text-center text-xs text-neutral-500 font-mono bg-white">
+    Bayesian Inference Lab &bull; Conditional Probability, Bayes' Theorem &amp; Posterior Updating
+  </footer>
+
+  <!-- Script Logic -->
+  <script>
+    /* -------------------------------------------------------------
+       1. Special Mathematical Functions: LogGamma & Regularized Beta
+       ------------------------------------------------------------- */
+    function logGamma(z) {
+      const c = [
+        676.5203681218851,
+        -1259.1392167224028,
+        771.3234287776531,
+        -176.6150291621406,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.984369578019572e-6,
+        1.5056327351493116e-7
+      ];
+      if (z < 0.5) {
+        return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - logGamma(1 - z);
+      }
+      z -= 1;
+      let x = 0.99999999999980993;
+      for (let i = 0; i < c.length; i++) {
+        x += c[i] / (z + i + 1);
+      }
+      const t = z + 7.5;
+      return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+    }
+
+    function logBeta(a, b) {
+      return logGamma(a) + logGamma(b) - logGamma(a + b);
+    }
+
+    // Beta(a, b) probability density function at x in (0, 1)
+    function betaPdf(x, a, b) {
+      if (x <= 0 || x >= 1) {
+        if (x === 0 && a === 1) return b;
+        if (x === 1 && b === 1) return a;
+        return 0;
+      }
+      const logVal = (a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - logBeta(a, b);
+      return Math.exp(logVal);
+    }
+
+    // Lentz continued fraction for Regularized Incomplete Beta I_x(a, b)
+    function betaContinuedFraction(a, b, x) {
+      const MAX_ITER = 200;
+      const EPS = 3e-14;
+      const FPMIN = 1e-300;
+
+      const qab = a + b;
+      const qap = a + 1.0;
+      const qam = a - 1.0;
+      let c = 1.0;
+      let d = 1.0 - (qab * x) / qap;
+      if (Math.abs(d) < FPMIN) d = FPMIN;
+      d = 1.0 / d;
+      let h = d;
+
+      for (let m = 1; m <= MAX_ITER; m++) {
+        const m2 = 2 * m;
+        // Even step
+        let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+        d = 1.0 + aa * d;
+        if (Math.abs(d) < FPMIN) d = FPMIN;
+        c = 1.0 + aa / c;
+        if (Math.abs(c) < FPMIN) c = FPMIN;
+        d = 1.0 / d;
+        h *= d * c;
+
+        // Odd step
+        aa = -((a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+        d = 1.0 + aa * d;
+        if (Math.abs(d) < FPMIN) d = FPMIN;
+        c = 1.0 + aa / c;
+        if (Math.abs(c) < FPMIN) c = FPMIN;
+        d = 1.0 / d;
+        const delta = d * c;
+        h *= delta;
+
+        if (Math.abs(delta - 1.0) < EPS) break;
+      }
+      return h;
+    }
+
+    function regularizedIncompleteBeta(x, a, b) {
+      if (x <= 0) return 0.0;
+      if (x >= 1) return 1.0;
+      const bt = Math.exp(a * Math.log(x) + b * Math.log(1.0 - x) - logBeta(a, b));
+      if (x < (a + 1.0) / (a + b + 2.0)) {
+        return (bt * betaContinuedFraction(a, b, x)) / a;
+      }
+      return 1.0 - (bt * betaContinuedFraction(b, a, 1.0 - x)) / b;
+    }
+
+    // Exact inverse Beta CDF via bisection
+    function betaQuantile(p, a, b) {
+      if (p <= 0) return 0.0;
+      if (p >= 1) return 1.0;
+      let lo = 0.0;
+      let hi = 1.0;
+      for (let iter = 0; iter < 60; iter++) {
+        const mid = 0.5 * (lo + hi);
+        if (regularizedIncompleteBeta(mid, a, b) < p) {
+          lo = mid;
+        } else {
+          hi = mid;
+        }
+      }
+      return 0.5 * (lo + hi);
+    }
+
+    /* -------------------------------------------------------------
+       2. Application State & Chart Instances
+       ------------------------------------------------------------- */
+    let state = {
+      alpha0: 2.0,
+      beta0: 10.0,
+      n: 20,
+      k: 13,
+      discPrior: 0.01,
+      discSens: 0.95,
+      discFpr: 0.05
+    };
+
+    let bayesDensityChart = null;
+    let sequentialChart = null;
+
+    /* -------------------------------------------------------------
+       3. Continuous Beta-Binomial Diagnostics & Charts
+       ------------------------------------------------------------- */
+    function updateContinuousBayesianModel() {
+      const { alpha0, beta0, n, k } = state;
+      const alphaN = alpha0 + k;
+      const betaN = beta0 + (n - k);
+
+      const n0 = alpha0 + beta0;
+      const priorMean = alpha0 / n0;
+      const mle = n > 0 ? k / n : NaN;
+      const dataWeight = n / (n0 + n);
+
+      const postMean = alphaN / (alphaN + betaN);
+      const postVar = (alphaN * betaN) / (Math.pow(alphaN + betaN, 2) * (alphaN + betaN + 1));
+      const postSd = Math.sqrt(postVar);
+
+      // Posterior Mode (MAP)
+      let postMapLabel = "";
+      if (alphaN > 1 && betaN > 1) {
+        postMapLabel = `MAP = ${((alphaN - 1) / (alphaN + betaN - 2)).toFixed(4)}`;
+      } else if (alphaN === 1 && betaN === 1) {
+        postMapLabel = "MAP = uniform [0,1]";
+      } else if (alphaN <= 1 && betaN > 1) {
+        postMapLabel = "MAP = 0.0000";
+      } else if (alphaN > 1 && betaN <= 1) {
+        postMapLabel = "MAP = 1.0000";
+      } else {
+        postMapLabel = "MAP = {0, 1} (bimodal)";
+      }
+
+      const ciLow = betaQuantile(0.025, alphaN, betaN);
+      const ciHigh = betaQuantile(0.975, alphaN, betaN);
+
+      // Update UI badges and metrics
+      document.getElementById("badgePosteriorParams").textContent = `Beta(${alphaN.toFixed(1)}, ${betaN.toFixed(1)})`;
+      document.getElementById("valPriorMean").textContent = priorMean.toFixed(4);
+      document.getElementById("valPriorEss").textContent = `n₀ = ${n0.toFixed(1)}`;
+
+      document.getElementById("valMLE").textContent = n > 0 ? mle.toFixed(4) : "N/A (n = 0)";
+      document.getElementById("valDataWeight").textContent = `wₙ = ${(dataWeight * 100).toFixed(1)}%`;
+
+      document.getElementById("valPostMean").textContent = postMean.toFixed(4);
+      document.getElementById("valPostMap").textContent = postMapLabel;
+
+      document.getElementById("valCredibleInt").textContent = `[${ciLow.toFixed(3)}, ${ciHigh.toFixed(3)}]`;
+      document.getElementById("valPostSd").textContent = `SD = ${postSd.toFixed(4)}`;
+
+      // Influence insight message
+      const insightBox = document.getElementById("influenceInsightBox");
+      if (n === 0) {
+        insightBox.innerHTML = `<strong>No Data Observed ($n = 0$):</strong> With zero observations ($w_n = 0\\%$), the posterior coincides identically with the prior $\\text{Beta}(${alpha0.toFixed(1)}, ${beta0.toFixed(1)})$.`;
+      } else if (dataWeight < 0.4) {
+        insightBox.innerHTML = `<strong>Prior-Dominated Regime ($n = ${n} < n_0 = ${n0.toFixed(1)}$):</strong> The prior accounts for <strong>${((1 - dataWeight) * 100).toFixed(1)}%</strong> of posterior weight, pulling the estimate from $\\hat{\\theta}_{\\text{MLE}} = ${mle.toFixed(3)}$ toward $\\mu_0 = ${priorMean.toFixed(3)}$.`;
+      } else if (dataWeight <= 0.75) {
+        insightBox.innerHTML = `<strong>Balanced Compromise ($w_n = ${(dataWeight * 100).toFixed(1)}\\%$):</strong> Prior pseudo-counts ($n_0 = ${n0.toFixed(1)}$) and observed trials ($n = ${n}$) exert comparable influence, yielding $\\mathbb{E}[\\theta \\mid D] = ${postMean.toFixed(3)}$.`;
+      } else {
+        insightBox.innerHTML = `<strong>Likelihood-Dominated Regime ($n = ${n} \\gg n_0 = ${n0.toFixed(1)}$):</strong> Sample evidence carries <strong>${(dataWeight * 100).toFixed(1)}%</strong> of the weight. Under suitable regularity conditions, posterior inference becomes increasingly dominated by the data and concentrates around $\\hat{\\theta}_{\\text{MLE}} = ${mle.toFixed(3)}$.`;
+      }
+      renderMathInContainer(insightBox);
+
+      renderBayesDensityChart(alpha0, beta0, k, n, alphaN, betaN);
+      renderSequentialChart(alpha0, beta0, n, k);
+    }
+
+    function renderBayesDensityChart(alpha0, beta0, k, n, alphaN, betaN) {
+      const numGrid = 160;
+      const labels = [];
+      const priorVals = [];
+      const likVals = [];
+      const postVals = [];
+
+      // Likelihood normalized as a density over theta: L(theta; k, n) / B(k+1, n-k+1) = Beta(k+1, n-k+1) PDF
+      const likA = k + 1;
+      const likB = (n - k) + 1;
+
+      for (let i = 0; i <= numGrid; i++) {
+        const theta = 0.002 + (i / numGrid) * 0.996;
+        labels.push(theta.toFixed(3));
+        priorVals.push(betaPdf(theta, alpha0, beta0));
+        likVals.push(n > 0 ? betaPdf(theta, likA, likB) : 0);
+        postVals.push(betaPdf(theta, alphaN, betaN));
+      }
+
+      if (bayesDensityChart) {
+        bayesDensityChart.destroy();
+      }
+
+      const datasets = [
+        {
+          label: `Prior π(θ) = Beta(${alpha0.toFixed(1)}, ${beta0.toFixed(1)})`,
+          data: priorVals,
+          borderColor: "#6b7280",
+          backgroundColor: "transparent",
+          borderDash: [5, 4],
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.25
+        },
+        {
+          label: `Posterior π(θ | D) = Beta(${alphaN.toFixed(1)}, ${betaN.toFixed(1)})`,
+          data: postVals,
+          borderColor: "#000000",
+          backgroundColor: "rgba(0, 0, 0, 0.08)",
+          borderWidth: 2.2,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.25
+        }
+      ];
+
+      if (n > 0) {
+        datasets.splice(1, 0, {
+          label: `Normalized Likelihood (as a density over θ): L(θ; k=${k}, n=${n})`,
+          data: likVals,
+          borderColor: "#1f2937",
+          backgroundColor: "transparent",
+          borderDash: [2, 2],
+          borderWidth: 1.8,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.25
+        });
+      }
+
+      const ctx = document.getElementById("bayesDensityChart").getContext("2d");
+      bayesDensityChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              grid: { color: "#f3f4f6" },
+              title: {
+                display: true,
+                text: "Parameter θ ∈ [0, 1]",
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              },
+              ticks: {
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 },
+                maxTicksLimit: 11
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: "#f3f4f6" },
+              title: {
+                display: true,
+                text: "Probability Density",
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              },
+              ticks: {
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#111827",
+                font: { family: "monospace", size: 10 }
+              }
+            },
+            tooltip: {
+              backgroundColor: "#ffffff",
+              titleColor: "#000000",
+              bodyColor: "#374151",
+              borderColor: "#d1d5db",
+              borderWidth: 1,
+              callbacks: {
+                title: (items) => `θ = ${items[0].label}`,
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderSequentialChart(alpha0, beta0, n, k) {
+      const maxSteps = Math.max(n, 10);
+      const numPoints = Math.min(40, maxSteps);
+      const stepLabels = [];
+      const postMeanSeries = [];
+      const ciUpperSeries = [];
+      const ciLowerSeries = [];
+      const priorRefSeries = [];
+      const mleRefSeries = [];
+
+      const priorMean = alpha0 / (alpha0 + beta0);
+      const finalMle = n > 0 ? k / n : null;
+
+      for (let i = 0; i <= numPoints; i++) {
+        const m = Math.round((i / numPoints) * maxSteps);
+        stepLabels.push(m.toString());
+
+        const kStep = n > 0 ? (m / n) * k : 0;
+        const nStep = n > 0 ? m : 0;
+        const aStep = alpha0 + kStep;
+        const bStep = beta0 + (nStep - kStep);
+
+        postMeanSeries.push(aStep / (aStep + bStep));
+        ciUpperSeries.push(betaQuantile(0.975, aStep, bStep));
+        ciLowerSeries.push(betaQuantile(0.025, aStep, bStep));
+        priorRefSeries.push(priorMean);
+        if (finalMle !== null) {
+          mleRefSeries.push(finalMle);
+        }
+      }
+
+      if (sequentialChart) {
+        sequentialChart.destroy();
+      }
+
+      const datasets = [
+        {
+          label: "95% Credible Upper Bound",
+          data: ciUpperSeries,
+          borderColor: "rgba(107, 114, 128, 0.45)",
+          backgroundColor: "rgba(0, 0, 0, 0.06)",
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: "+1",
+          tension: 0.2
+        },
+        {
+          label: "95% Credible Lower Bound",
+          data: ciLowerSeries,
+          borderColor: "rgba(107, 114, 128, 0.45)",
+          backgroundColor: "transparent",
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.2
+        },
+        {
+          label: "Posterior Mean E[θ | D_m]",
+          data: postMeanSeries,
+          borderColor: "#000000",
+          backgroundColor: "#000000",
+          borderWidth: 2.2,
+          pointRadius: 2,
+          fill: false,
+          tension: 0.2
+        },
+        {
+          label: `Prior Mean μ₀ = ${priorMean.toFixed(3)}`,
+          data: priorRefSeries,
+          borderColor: "#9ca3af",
+          borderDash: [4, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false
+        }
+      ];
+
+      if (finalMle !== null) {
+        datasets.push({
+          label: `Observed MLE k/n = ${finalMle.toFixed(3)}`,
+          data: mleRefSeries,
+          borderColor: "#374151",
+          borderDash: [2, 2],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false
+        });
+      }
+
+      const ctx = document.getElementById("sequentialChart").getContext("2d");
+      sequentialChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: stepLabels,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              grid: { color: "#f3f4f6" },
+              title: {
+                display: true,
+                text: "Cumulative Trials m",
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              },
+              ticks: {
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 },
+                maxTicksLimit: 11
+              }
+            },
+            y: {
+              min: 0,
+              max: 1,
+              grid: { color: "#f3f4f6" },
+              title: {
+                display: true,
+                text: "Parameter Estimate θ",
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              },
+              ticks: {
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#111827",
+                font: { family: "monospace", size: 10 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /* -------------------------------------------------------------
+       4. Discrete Bayes' Rule Calculator
+       ------------------------------------------------------------- */
+    function updateDiscreteBayes() {
+      const { discPrior, discSens, discFpr } = state;
+      const evidence = discSens * discPrior + discFpr * (1.0 - discPrior);
+      const bf10 = discSens / discFpr;
+      const posterior = evidence > 0 ? (discSens * discPrior) / evidence : 0.0;
+
+      document.getElementById("labelDiscPrior").textContent = `${(discPrior * 100).toFixed(1)}%`;
+      document.getElementById("labelDiscSens").textContent = `${(discSens * 100).toFixed(1)}%`;
+      document.getElementById("labelDiscFpr").textContent = `${(discFpr * 100).toFixed(1)}%`;
+
+      document.getElementById("valDiscEvidence").textContent = `${evidence.toFixed(4)} (${(evidence * 100).toFixed(2)}%)`;
+      document.getElementById("valDiscBF").textContent = `${bf10.toFixed(2)}`;
+      document.getElementById("valDiscPost").textContent = `${(posterior * 100).toFixed(2)}%`;
+    }
+
+    /* -------------------------------------------------------------
+       5. Interactive Event Listeners & Initialization
+       ------------------------------------------------------------- */
+    const sliderAlpha0 = document.getElementById("sliderAlpha0");
+    const sliderBeta0 = document.getElementById("sliderBeta0");
+    const labelAlpha0 = document.getElementById("labelAlpha0");
+    const labelBeta0 = document.getElementById("labelBeta0");
+    const sliderTrialsN = document.getElementById("sliderTrialsN");
+    const labelTrialsN = document.getElementById("labelTrialsN");
+    const sliderSuccessK = document.getElementById("sliderSuccessK");
+    const labelSuccessK = document.getElementById("labelSuccessK");
+
+    function clearPriorPresetHighlight() {
+      document.querySelectorAll(".prior-preset-btn").forEach((b) => {
+        b.classList.remove("border-black", "font-bold", "bg-neutral-100");
+        b.classList.add("border-neutral-200", "bg-neutral-50");
+      });
+    }
+
+    document.querySelectorAll(".prior-preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        clearPriorPresetHighlight();
+        btn.classList.remove("border-neutral-200", "bg-neutral-50");
+        btn.classList.add("border-black", "font-bold", "bg-neutral-100");
+
+        state.alpha0 = parseFloat(btn.getAttribute("data-a"));
+        state.beta0 = parseFloat(btn.getAttribute("data-b"));
+        sliderAlpha0.value = state.alpha0;
+        sliderBeta0.value = state.beta0;
+        labelAlpha0.textContent = state.alpha0.toFixed(1);
+        labelBeta0.textContent = state.beta0.toFixed(1);
+        updateContinuousBayesianModel();
+      });
+    });
+
+    sliderAlpha0.addEventListener("input", (e) => {
+      state.alpha0 = parseFloat(e.target.value);
+      labelAlpha0.textContent = state.alpha0.toFixed(1);
+      clearPriorPresetHighlight();
+      updateContinuousBayesianModel();
+    });
+
+    sliderBeta0.addEventListener("input", (e) => {
+      state.beta0 = parseFloat(e.target.value);
+      labelBeta0.textContent = state.beta0.toFixed(1);
+      clearPriorPresetHighlight();
+      updateContinuousBayesianModel();
+    });
+
+    sliderTrialsN.addEventListener("input", (e) => {
+      state.n = parseInt(e.target.value, 10);
+      sliderSuccessK.max = state.n;
+      if (state.k > state.n) {
+        state.k = state.n;
+        sliderSuccessK.value = state.k;
+      }
+      labelTrialsN.textContent = state.n;
+      const ratioText = state.n > 0 ? `(k/n = ${(state.k / state.n).toFixed(3)})` : "(k/n = N/A)";
+      labelSuccessK.textContent = `${state.k} ${ratioText}`;
+      updateContinuousBayesianModel();
+    });
+
+    sliderSuccessK.addEventListener("input", (e) => {
+      state.k = parseInt(e.target.value, 10);
+      const ratioText = state.n > 0 ? `(k/n = ${(state.k / state.n).toFixed(3)})` : "(k/n = N/A)";
+      labelSuccessK.textContent = `${state.k} ${ratioText}`;
+      updateContinuousBayesianModel();
+    });
+
+    document.getElementById("btnSimulateBatch").addEventListener("click", () => {
+      const batchSize = 10;
+      const trueTheta = 0.65;
+      let batchSuccesses = 0;
+      for (let i = 0; i < batchSize; i++) {
+        if (Math.random() < trueTheta) batchSuccesses++;
+      }
+      state.n += batchSize;
+      state.k += batchSuccesses;
+
+      if (state.n > parseInt(sliderTrialsN.max, 10)) {
+        sliderTrialsN.max = state.n;
+      }
+      sliderTrialsN.value = state.n;
+      sliderSuccessK.max = state.n;
+      sliderSuccessK.value = state.k;
+
+      labelTrialsN.textContent = state.n;
+      labelSuccessK.textContent = `${state.k} (k/n = ${(state.k / state.n).toFixed(3)})`;
+      updateContinuousBayesianModel();
+    });
+
+    // Discrete Bayes' rule controls
+    const sliderDiscPrior = document.getElementById("sliderDiscPrior");
+    const sliderDiscSens = document.getElementById("sliderDiscSens");
+    const sliderDiscFpr = document.getElementById("sliderDiscFpr");
+
+    function clearDiscretePresetHighlight() {
+      document.querySelectorAll(".discrete-preset-btn").forEach((b) => {
+        b.classList.remove("border-black", "font-bold", "bg-neutral-100");
+        b.classList.add("border-neutral-200", "bg-neutral-50");
+      });
+    }
+
+    document.querySelectorAll(".discrete-preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        clearDiscretePresetHighlight();
+        btn.classList.remove("border-neutral-200", "bg-neutral-50");
+        btn.classList.add("border-black", "font-bold", "bg-neutral-100");
+
+        state.discPrior = parseFloat(btn.getAttribute("data-p"));
+        state.discSens = parseFloat(btn.getAttribute("data-sens"));
+        state.discFpr = parseFloat(btn.getAttribute("data-fpr"));
+
+        sliderDiscPrior.value = state.discPrior;
+        sliderDiscSens.value = state.discSens;
+        sliderDiscFpr.value = state.discFpr;
+        updateDiscreteBayes();
+      });
+    });
+
+    sliderDiscPrior.addEventListener("input", (e) => {
+      state.discPrior = parseFloat(e.target.value);
+      clearDiscretePresetHighlight();
+      updateDiscreteBayes();
+    });
+
+    sliderDiscSens.addEventListener("input", (e) => {
+      state.discSens = parseFloat(e.target.value);
+      clearDiscretePresetHighlight();
+      updateDiscreteBayes();
+    });
+
+    sliderDiscFpr.addEventListener("input", (e) => {
+      state.discFpr = parseFloat(e.target.value);
+      clearDiscretePresetHighlight();
+      updateDiscreteBayes();
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      updateContinuousBayesianModel();
+      updateDiscreteBayes();
+      renderAllMath();
+    });
+  </script>
+</body>
+</html>
