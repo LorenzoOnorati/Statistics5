@@ -55,6 +55,38 @@
 
     <!-- VISTA ROOT: ELENCO CARTELLE -->
     <div id="view-root" class="w-full space-y-4">
+       <!-- CARTELLA HW7 -->
+      <div 
+        onclick="navigate('homework7')"
+        class="w-full text-left group bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl p-6 shadow-xs hover:shadow-md transition-all duration-200 flex items-center justify-between cursor-pointer focus:outline-none"
+      >
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 transition-transform duration-200 group-hover:scale-105">
+            <svg class="w-6 h-6 fill-current" viewBox="0 0 20 20">
+              <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                homework7
+              </h2>
+              <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-mono font-medium">
+                folder
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5 font-mono">
+              2 items • Click to open
+            </p>
+          </div>
+        </div>
+        <div class="w-8 h-8 rounded-full bg-slate-50 group-hover:bg-indigo-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+
   <!-- CARTELLA HW6 -->
       <div 
         onclick="navigate('homework6')"
@@ -151,6 +183,43 @@
       </div>
 
     </div>
+      <!-- VISTA DENTRO HW7 -->
+    <div id="view-homework7" class="hidden space-y-4">
+      <a 
+        href="./modes_of_convergence_in_probability_theory.html"
+        class="block bg-white rounded-xl border border-slate-200 hover:border-indigo-400 p-6 shadow-xs hover:shadow-md transition-all duration-200 group"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+             Modes of Convergence
+            </h2>
+           
+          </div>
+          <svg class="w-5 h-5 text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </a>
+       <a 
+        href="./conditional_probability_bayes_theorem_statistical_inference.html"
+        class="block bg-white rounded-xl border border-slate-200 hover:border-indigo-400 p-6 shadow-xs hover:shadow-md transition-all duration-200 group"
+          
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+             Conditional Probability Bayes
+            </h2>
+          
+          </div>
+          <svg class="w-5 h-5 text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </a>
+    </div>
+
   <!-- VISTA DENTRO HW6 -->
     <div id="view-homework6" class="hidden space-y-4">
      
@@ -267,7 +336,19 @@
       bFolder.classList.remove('flex');
       bFolder.classList.add('hidden');
       badge.classList.add('hidden');
-
+ if (hash === '#homework7') {
+        hw5El.classList.remove('hidden');
+        bFolder.classList.remove('hidden');
+        bFolder.classList.add('flex');
+        bCurrent.innerHTML = `
+          <svg class="w-4 h-4 text-indigo-500 fill-current" viewBox="0 0 20 20">
+            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
+          </svg>
+          homework7
+        `;
+        badge.innerText = '2 exercise';
+        badge.classList.remove('hidden');
+      } 
       if (hash === '#homework5') {
         hw5El.classList.remove('hidden');
         bFolder.classList.remove('hidden');
