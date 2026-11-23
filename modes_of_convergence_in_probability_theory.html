@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modes of Convergence in Probability Theory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for convergence and distribution plots -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- KaTeX for mathematical typesetting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderAllMath()"></script>
+  <style>
+    body {
+      background-color: #ffffff;
+      color: #111827;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #999;
+    }
+    canvas {
+      display: block;
+    }
+    .katex-display {
+      margin: 0.5em 0 !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scroll selection:bg-neutral-200 selection:text-black">
+
+  <!-- Header -->
+  <header class="border-b border-neutral-200 bg-white/95 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded border border-neutral-300 bg-neutral-100 flex items-center justify-center font-mono font-bold text-black text-base shadow-sm">
+        $\xrightarrow{P}$
+      </div>
+      <div>
+        <h1 class="text-lg font-semibold tracking-wide text-neutral-900">Modes of Convergence in Probability Theory</h1>
+        <p class="text-xs text-neutral-500">Exploring $\text{a.s.}$, $L^2$, $\xrightarrow{P}$, $\xrightarrow{d}$, LLN, CLT, and the $\sqrt{n}$ variance scaling</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center px-2.5 py-1 rounded text-xs font-mono font-medium border border-neutral-300 bg-neutral-50 text-neutral-700">
+        Asymptotic Probability &bull; Scientific Lab
+      </span>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Controls, Diagnostics & Comparison Tables (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+
+      <!-- Card 1: Simulation & Stochastic Process Controls -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-black"></span>
+            1. Stochastic Process &amp; Scaling Controls
+          </h2>
+          <button id="btnResimulate" class="px-2.5 py-1 bg-black hover:bg-neutral-800 text-white rounded text-[11px] font-mono transition shadow-sm">
+            &#8635; Resimulate
+          </button>
+        </div>
+
+        <!-- Underlying Distribution Selector -->
+        <div class="mb-4">
+          <label for="selectDist" class="block text-xs text-neutral-700 font-medium mb-1">
+            Parent distribution $F_X$:
+          </label>
+          <select id="selectDist" class="w-full bg-neutral-50 border border-neutral-300 text-neutral-900 rounded-md px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:border-black">
+            <option value="bernoulli">Bernoulli(p = 0.5)  [μ = 0.5, σ² = 0.25]</option>
+            <option value="uniform">Uniform(0, 1)  [μ = 0.5, σ² = 1/12]</option>
+            <option value="exponential" selected>Exponential(λ = 1)  [μ = 1.0, σ² = 1.0, skewed]</option>
+            <option value="student_t">Student-t(ν = 3)  [μ = 0.0, σ² = 3.0, heavy tail]</option>
+            <option value="cauchy">Cauchy(0, 1)  [mean undefined, σ² = ∞; classical LLN &amp; Gaussian CLT fail]</option>
+          </select>
+        </div>
+
+        <!-- Sample Size n -->
+        <div class="mb-3.5">
+          <div class="flex justify-between items-center text-xs mb-1">
+            <label for="sliderN" class="text-neutral-700 font-medium">Sample size $n$:</label>
+            <span id="labelN" class="font-mono text-black font-bold bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded">200</span>
+          </div>
+          <input type="range" id="sliderN" min="20" max="800" value="200" step="10"
+                 class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+          <div class="flex justify-between text-[10px] text-neutral-500 font-mono mt-0.5">
+            <span>20</span>
+            <span>400</span>
+            <span>800</span>
+          </div>
+        </div>
+
+        <!-- Monte Carlo Paths M -->
+        <div class="mb-3.5">
+          <div class="flex justify-between items-center text-xs mb-1">
+            <label for="sliderM" class="text-neutral-700 font-medium">Monte Carlo trajectories $M$:</label>
+            <span id="labelM" class="font-mono text-black font-bold bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded">400</span>
+          </div>
+          <input type="range" id="sliderM" min="100" max="1000" value="400" step="50"
+                 class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+        </div>
+
+        <!-- Tolerance epsilon -->
+        <div class="mb-4">
+          <div class="flex justify-between items-center text-xs mb-1">
+            <label for="sliderEps" class="text-neutral-700 font-medium">LLN deviation threshold $\varepsilon$:</label>
+            <span id="labelEps" class="font-mono text-black font-bold bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded">0.10</span>
+          </div>
+          <input type="range" id="sliderEps" min="0.03" max="0.35" value="0.10" step="0.01"
+                 class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+        </div>
+
+        <!-- Rescaling Exponent alpha for n^alpha (X_bar - mu) -->
+        <div class="pt-3 border-t border-neutral-200 mb-4">
+          <div class="flex justify-between items-center text-xs mb-1">
+            <label for="sliderAlpha" class="text-neutral-700 font-medium">Rescaling exponent $\alpha$ in $n^\alpha(\bar{X}_n - \mu)$:</label>
+            <span id="labelAlpha" class="font-mono text-black font-bold bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded">0.50</span>
+          </div>
+          <input type="range" id="sliderAlpha" min="0.00" max="1.00" value="0.50" step="0.05"
+                 class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+          <div class="grid grid-cols-4 gap-1.5 text-[11px] font-mono mt-2">
+            <button class="alpha-btn px-1.5 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 transition" data-alpha="0.00">$\alpha=0$ (LLN)</button>
+            <button class="alpha-btn px-1.5 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 transition" data-alpha="0.25">$\alpha=0.25$</button>
+            <button class="alpha-btn px-1.5 py-1 rounded border border-black font-bold bg-neutral-50 transition" data-alpha="0.50">$\alpha=0.5$ ($\sqrt{n}$)</button>
+            <button class="alpha-btn px-1.5 py-1 rounded border border-neutral-200 hover:border-black bg-neutral-50 transition" data-alpha="0.80">$\alpha=0.80$</button>
+          </div>
+        </div>
+
+        <!-- Autocorrelation rho (Independence vs Dependence) -->
+        <div class="pt-3 border-t border-neutral-200">
+          <div class="flex justify-between items-center text-xs mb-1">
+            <label for="sliderRho" class="text-neutral-700 font-medium">Copula $\text{AR}(1)$ dependence $\rho$ (preserves $F_X$):</label>
+            <span id="labelRho" class="font-mono text-black font-bold bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded">0.00 (i.i.d.)</span>
+          </div>
+          <input type="range" id="sliderRho" min="-0.75" max="0.90" value="0.00" step="0.05"
+                 class="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-black">
+          <div class="flex justify-between text-[10px] text-neutral-500 font-mono mt-0.5">
+            <span>-0.75 (neg. dep.)</span>
+            <span>0.00 (independent)</span>
+            <span>+0.90 (strong dep.)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Live Convergence Diagnostics -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase mb-3 flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-black"></span>
+            2. Empirical Diagnostics at $n$
+          </span>
+          <span id="diagEffectiveN" class="text-[10px] text-neutral-600 font-mono bg-neutral-100 px-2 py-0.5 rounded border border-neutral-200">
+            n_eff (asymp.) = 200.0
+          </span>
+        </h2>
+
+        <div class="space-y-2.5 text-xs font-mono">
+          <!-- In Probability -->
+          <div class="p-2.5 rounded bg-neutral-50 border border-neutral-200 flex flex-col gap-0.5">
+            <div class="flex justify-between items-center">
+              <span id="labelProbTail" class="text-neutral-900 font-bold">1. In Probability ($\bar{X}_n \xrightarrow{P} \mu$):</span>
+              <span id="valProbTail" class="text-black font-semibold">-</span>
+            </div>
+            <div class="flex justify-between text-[11px] text-neutral-500">
+              <span>Chebyshev upper bound $\text{Var}(\bar{X}_n)/\varepsilon^2$:</span>
+              <span id="valChebyshev">-</span>
+            </div>
+          </div>
+
+          <!-- Finite-Horizon Pathwise Deviation -->
+          <div class="p-2.5 rounded bg-neutral-50 border border-neutral-200 flex flex-col gap-0.5">
+            <div class="flex justify-between items-center">
+              <span id="labelASSup" class="text-neutral-900 font-bold">2. Finite-Horizon Pathwise Deviation ($\max_{n/2 \le k \le n} |\bar{X}_k - \mu| > \varepsilon$):</span>
+              <span id="valASSup" class="text-black font-semibold">-</span>
+            </div>
+            <div class="flex justify-between text-[11px] text-neutral-500">
+              <span id="sublabelASInside">Fraction of simulated paths inside $\mu \pm \varepsilon$ over $[n/2, n]$:</span>
+              <span id="valASInside">-</span>
+            </div>
+          </div>
+
+          <!-- Mean-Square L2 -->
+          <div class="p-2.5 rounded bg-neutral-50 border border-neutral-200 flex flex-col gap-0.5">
+            <div class="flex justify-between items-center">
+              <span id="labelMSEEmp" class="text-neutral-900 font-bold">3. Mean-Square Error ($L^2$: $\mathbb{E}[(\bar{X}_n - \mu)^2]$):</span>
+              <span id="valMSEEmp" class="text-black font-semibold">-</span>
+            </div>
+            <div class="flex justify-between text-[11px] text-neutral-500">
+              <span id="sublabelMSETheo">Exact finite-sample $\text{Var}(\bar{X}_n)$:</span>
+              <span id="valMSETheo">-</span>
+            </div>
+          </div>
+
+          <!-- Convergence in Distribution -->
+          <div class="p-2.5 rounded bg-neutral-50 border border-neutral-200 flex flex-col gap-0.5">
+            <div class="flex justify-between items-center">
+              <span id="labelCLTVarEmp" class="text-neutral-900 font-bold">4. Rescaled Variance $\widehat{\text{Var}}(n^\alpha(\bar{X}_n - \mu))$:</span>
+              <span id="valCLTVarEmp" class="text-black font-semibold">-</span>
+            </div>
+            <div class="flex justify-between text-[11px] text-neutral-500">
+              <span id="sublabelCLTVarTheo">Exact $n^{2\alpha}\text{Var}(\bar{X}_n)$ / KS vs $\mathcal{N}(0, \sigma_{\text{LR}}^2)$:</span>
+              <span id="valCLTVarTheo">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="regimeBanner" class="mt-3 p-2.5 rounded bg-neutral-100 border border-neutral-300 text-[11px] text-neutral-800 leading-normal">
+          <strong>Critical CLT Regime ($\alpha = 0.50$):</strong> Multiplying $(\bar{X}_n - \mu)$ by $\sqrt{n}$ cancels the $1/n$ variance decay, stabilizing the variance at $\sigma_{\text{LR}}^2$ and yielding convergence in distribution to a non-degenerate Gaussian.
+        </div>
+      </div>
+
+      <!-- Card 3: Taxonomy & Implication Matrix -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase mb-2 flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-black"></span>
+          3. Taxonomy of Convergence Modes
+        </h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left font-mono text-[11px] border-collapse">
+            <thead>
+              <tr class="border-b border-neutral-300 text-neutral-600 bg-neutral-50">
+                <th class="py-1.5 px-2">Mode</th>
+                <th class="py-1.5 px-2">Criterion</th>
+                <th class="py-1.5 px-2">Key Theorem</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-200 text-neutral-800">
+              <tr>
+                <td class="py-1.5 px-2 font-bold">Almost Sure ($\text{a.s.}$)</td>
+                <td class="py-1.5 px-2">$P(\lim_{n\to\infty} X_n = X) = 1$</td>
+                <td class="py-1.5 px-2 text-neutral-600">Kolmogorov SLLN, Glivenko-Cantelli</td>
+              </tr>
+              <tr>
+                <td class="py-1.5 px-2 font-bold">Mean-Square ($L^2$)</td>
+                <td class="py-1.5 px-2">$\lim_{n\to\infty} \mathbb{E}[(X_n - X)^2] = 0$</td>
+                <td class="py-1.5 px-2 text-neutral-600">$\text{MSE} \to 0$ consistency</td>
+              </tr>
+              <tr>
+                <td class="py-1.5 px-2 font-bold">In Probability ($\xrightarrow{P}$)</td>
+                <td class="py-1.5 px-2">$\lim_{n\to\infty} P(|X_n - X| > \varepsilon) = 0$</td>
+                <td class="py-1.5 px-2 text-neutral-600">Khinchin WLLN, Weak consistency</td>
+              </tr>
+              <tr>
+                <td class="py-1.5 px-2 font-bold">In Distribution ($\xrightarrow{d}$)</td>
+                <td class="py-1.5 px-2">$\lim_{n\to\infty} F_{X_n}(x) = F_X(x)$</td>
+                <td class="py-1.5 px-2 text-neutral-600">Lindeberg-L&eacute;vy CLT, Slutsky</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-[11px] text-neutral-500 mt-2.5 leading-relaxed">
+          <strong>Implication Hierarchy:</strong> $\text{a.s.} \implies \xrightarrow{P} \implies \xrightarrow{d}$ and $L^2 \implies \xrightarrow{P} \implies \xrightarrow{d}$, where $X_n \xrightarrow{L^2} X$ requires $\mathbb{E}[(X_n - X)^2] \to 0$ (not merely $\text{Var}(X_n) \to 0$). Conversely, if $X_n \xrightarrow{d} c$ where $c$ is a deterministic constant, then $X_n \xrightarrow{P} c$; convergence in distribution to a non-degenerate random variable does not imply convergence in probability.
+        </p>
+      </div>
+
+      <!-- Card 4: Classic Counterexamples Explorer -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <h2 class="text-sm font-semibold tracking-wider text-neutral-800 uppercase mb-2 flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-black"></span>
+          4. Why $\text{a.s.}$ and $L^2$ Do Not Imply Each Other
+        </h2>
+        <div class="flex gap-1.5 mb-2.5 text-xs font-mono">
+          <button id="btnCounterL2" class="flex-1 py-1 px-2 rounded border border-black font-bold bg-neutral-100 transition">
+            $L^2 \not\implies \text{a.s.}$ (Typewriter)
+          </button>
+          <button id="btnCounterAS" class="flex-1 py-1 px-2 rounded border border-neutral-200 bg-neutral-50 hover:border-black transition">
+            $\text{a.s.} \not\implies L^2$ (Rare Spikes)
+          </button>
+        </div>
+        <div id="counterexampleBox" class="p-3 rounded-lg bg-neutral-50 border border-neutral-200 text-xs text-neutral-700 leading-relaxed">
+          <strong>Typewriter Sequence on $\Omega = [0,1)$:</strong> For each integer $m \ge 1$, partition $[0,1)$ into $m$ subintervals $I_{m,j} = \left[\frac{j}{m}, \frac{j+1}{m}\right)$ for $j = 0, \dots, m-1$, and enumerate $X_{m,j}(\omega) = \mathbf{1}_{I_{m,j}}(\omega)$ block by block as a single sequence $X_n$. Then $\mathbb{E}[X_{m,j}^2] = \frac{1}{m} \to 0$ as $m \to \infty$ (so $X_n \xrightarrow{L^2} 0$ and $X_n \xrightarrow{P} 0$). However, every $\omega \in [0,1)$ belongs to one interval in each block $m$, so $X_n(\omega) = 1$ infinitely often and $0$ infinitely often: almost sure convergence fails everywhere.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Visual Charts & Mathematical Theory (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-6">
+
+      <!-- Chart 1: Sample Mean Trajectories (SLLN vs WLLN) -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+              Sample Mean Paths $\bar{X}_k(\omega)$: Finite-Horizon Behavior vs $\pm 2\,\text{SD}(\bar{X}_k)$
+            </h2>
+            <p class="text-xs text-neutral-500">
+              Empirical realization paths within tolerance band $\mu \pm \varepsilon$ alongside the $\pm 2\,\text{SD}(\bar{X}_k) \propto k^{-1/2}$ envelope
+            </p>
+          </div>
+          <div class="flex items-center gap-3 text-[11px] font-mono">
+            <span class="inline-flex items-center gap-1 text-neutral-700">
+              <span class="w-3 h-2 bg-neutral-200 border border-neutral-400"></span> $\mu \pm \varepsilon$
+            </span>
+            <span class="inline-flex items-center gap-1 text-neutral-700">
+              <span class="w-3 h-0.5 border-t-2 border-dashed border-black"></span> $\pm 2\,\text{SD}(\bar{X}_k)$
+            </span>
+          </div>
+        </div>
+
+        <div class="relative w-full aspect-[16/8] bg-white rounded-lg border border-neutral-300 overflow-hidden">
+          <canvas id="pathsCanvas" class="w-full h-full"></canvas>
+        </div>
+
+        <div class="mt-2 flex justify-between text-[11px] text-neutral-500 font-mono">
+          <span>k = 1</span>
+          <span id="pathsSummaryLabel">Showing 25 of 400 trajectories around μ = 1.00</span>
+          <span id="pathsEndLabel">k = 200</span>
+        </div>
+      </div>
+
+      <!-- Chart 2: L2 Mean-Square Error & Tail Probability Decay (Log-Log) -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+              $L^2$ Mean Squared Error &amp; Tail Probability Decay vs $n$
+            </h2>
+            <p class="text-xs text-neutral-500">
+              Log-Log scale: illustrates $\mathbb{E}[(\bar{X}_k - \mu)^2] \sim \mathcal{O}(k^{-1})$ and $P(|\bar{X}_k - \mu| > \varepsilon) \to 0$
+            </p>
+          </div>
+          <span class="text-xs font-mono text-neutral-600 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded">
+            Log-Log Scale
+          </span>
+        </div>
+
+        <div class="relative w-full h-56">
+          <canvas id="mseChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 3: Convergence in Distribution & Role of sqrt(n) -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+              Distribution of Rescaled Statistic $Y_n(\alpha) = n^\alpha(\bar{X}_n - \mu)$
+            </h2>
+            <p class="text-xs text-neutral-500">
+              Empirical density across $M$ replicates vs asymptotic Gaussian $\mathcal{N}(0, \sigma_{\text{LR}}^2)$ at $\alpha = 1/2$ ($\sqrt{n}$ scaling)
+            </p>
+          </div>
+          <span id="cltBadge" class="text-xs font-mono text-black font-semibold bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded">
+            α = 0.50 → √n(X̄_n - μ) [CLT Scale]
+          </span>
+        </div>
+
+        <div class="relative w-full h-60">
+          <canvas id="cltChart"></canvas>
+        </div>
+        <div id="cltWindowNote" class="mt-2 text-[11px] font-mono text-neutral-500 text-right">
+          100.0% of simulated replicates fall inside the visible display window
+        </div>
+      </div>
+
+      <!-- Theory Panel: Detailed Theoretical Explanation -->
+      <div class="border border-neutral-200 rounded-xl bg-white p-5 shadow-sm space-y-4">
+        <h2 class="text-sm font-semibold tracking-wider text-neutral-900 uppercase">
+          Mathematical Theory: Modes of Convergence, LLN, CLT &amp; $\sqrt{n}$
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-neutral-700">
+          <!-- Card A: Roles in LLN, CLT & Inference -->
+          <div class="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200">
+            <h3 class="font-bold text-black mb-1.5 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-black rounded-full"></span>
+              Roles in LLN, CLT &amp; Statistical Inference
+            </h3>
+            <ul class="list-disc list-inside space-y-1.5 text-neutral-600">
+              <li>
+                <strong>Weak Law of Large Numbers (WLLN):</strong> States $\bar{X}_n \xrightarrow{P} \mu$. When $\sigma^2 &lt; \infty$, Chebyshev's inequality yields $P(|\bar{X}_n - \mu| &gt; \varepsilon) \le \frac{\sigma^2}{n\varepsilon^2} \to 0$ directly from $L^2$ convergence.
+              </li>
+              <li>
+                <strong>Strong Law of Large Numbers (SLLN):</strong> For an i.i.d. sequence with $\mathbb{E}[|X_1|] &lt; \infty$, Kolmogorov's theorem proves that the sample mean converges almost surely to $\mu = \mathbb{E}[X_1]$ ($\bar{X}_n \xrightarrow{\text{a.s.}} \mu$).
+              </li>
+              <li>
+                <strong>Central Limit Theorem (CLT):</strong> For i.i.d. variables with $0 &lt; \sigma^2 &lt; \infty$, $\frac{\sqrt{n}(\bar{X}_n - \mu)}{\sigma} \xrightarrow{d} \mathcal{N}(0, 1)$. Unlike $\bar{X}_n \xrightarrow{P} \mu$, scaling by $\sqrt{n}$ preserves random fluctuations: this describes the asymptotic convergence of the normalized estimator's probability distribution, not pathwise convergence of individual trajectories to a limiting random variable.
+              </li>
+              <li>
+                <strong>Slutsky &amp; Glivenko-Cantelli:</strong> Distinguishing sample standard deviation $S_n = \sqrt{S_n^2}$ from sample variance $S_n^2$, if $S_n \xrightarrow{P} \sigma &gt; 0$ and $\frac{\sqrt{n}(\bar{X}_n - \mu)}{\sigma} \xrightarrow{d} \mathcal{N}(0, 1)$, Slutsky's theorem yields $\frac{\sqrt{n}(\bar{X}_n - \mu)}{S_n} \xrightarrow{d} \mathcal{N}(0, 1)$. Glivenko-Cantelli guarantees $\sup_x |F_n(x) - F(x)| \xrightarrow{\text{a.s.}} 0$.
+              </li>
+            </ul>
+          </div>
+
+          <!-- Card B: Why sqrt(n) Appears -->
+          <div class="p-3.5 rounded-lg bg-neutral-50 border border-neutral-200">
+            <h3 class="font-bold text-black mb-1.5 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 bg-neutral-500 rounded-full"></span>
+              Why $\sqrt{n}$ Appears: Variance Additivity &amp; Independence
+            </h3>
+            <p class="mb-1.5 text-neutral-600">
+              For partial sums $S_n = \sum_{i=1}^n X_i$ with finite second moments, the bilinear expansion of variance is:
+            </p>
+            <div class="bg-white p-2 rounded border border-neutral-300 text-[11px] mb-2 text-center text-black">
+              $$\text{Var}(S_n) = \sum_{i=1}^n \text{Var}(X_i) + 2\sum_{1 \le i &lt; j \le n} \text{Cov}(X_i, X_j)$$
+            </div>
+            <p class="text-neutral-600">
+              <strong>Pairwise uncorrelatedness</strong> ($\text{Cov}(X_i, X_j) = 0$) is sufficient for variance additivity $\text{Var}(S_n) = n\sigma^2$ and $\text{Var}(\bar{X}_n) = \sigma^2 / n$. However, uncorrelated variables can still be dependent and violate the classical CLT; thus <strong>independence</strong> (or structured weak dependence) is required for asymptotic normality. Rescaling by $n^\alpha$ gives:
+            </p>
+            <div class="bg-white p-2 rounded border border-neutral-300 text-[11px] my-1.5 text-center text-black">
+              $$\text{Var}\big(n^\alpha(\bar{X}_n - \mu)\big) = n^{2\alpha - 1}\sigma^2$$
+            </div>
+            <p class="text-neutral-600">
+              Only at $\alpha = \frac{1}{2}$ ($n^{1/2} = \sqrt{n}$) does $2\alpha - 1 = 0$, keeping the asymptotic variance finite and non-zero. Under serial dependence ($\rho \neq 0$), covariances modify the long-run variance to $\sigma_{\text{LR}}^2 = \sigma^2 \sum_{h=-\infty}^{\infty} \rho_X(h)$, changing the asymptotic effective sample size $n_{\text{eff}} = n (\sigma^2 / \sigma_{\text{LR}}^2)$.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-neutral-200 py-4 px-6 text-center text-xs text-neutral-500 font-mono bg-white">
+    Asymptotic Probability Lab &bull; Modes of Convergence ($\text{a.s.}$, $L^2$, $\xrightarrow{P}$, $\xrightarrow{d}$) &bull; LLN &amp; CLT
+  </footer>
+
+  <!-- Script Logic -->
+  <script>
+    /* -------------------------------------------------------------
+       1. Random Number Generation, Quantile Functions & Copula AR(1)
+       ------------------------------------------------------------- */
+    function sampleStandardNormal() {
+      let u1 = 0, u2 = 0;
+      while (u1 === 0) u1 = Math.random();
+      while (u2 === 0) u2 = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    }
+
+    function getDistParams(distKey) {
+      switch (distKey) {
+        case "bernoulli":
+          return { name: "Bernoulli(0.5)", mu: 0.5, center: 0.5, sigma2: 0.25, finiteVar: true };
+        case "uniform":
+          return { name: "Uniform(0,1)", mu: 0.5, center: 0.5, sigma2: 1.0 / 12.0, finiteVar: true };
+        case "exponential":
+          return { name: "Exponential(1)", mu: 1.0, center: 1.0, sigma2: 1.0, finiteVar: true };
+        case "student_t":
+          return { name: "Student-t(df=3)", mu: 0.0, center: 0.0, sigma2: 3.0, finiteVar: true };
+        case "cauchy":
+          // Theoretical mean is undefined; center = 0.0 denotes the location parameter x_0
+          return { name: "Cauchy(0,1)", mu: NaN, center: 0.0, sigma2: Infinity, finiteVar: false };
+        default:
+          return { name: "Exponential(1)", mu: 1.0, center: 1.0, sigma2: 1.0, finiteVar: true };
+      }
+    }
+
+    // Standard Normal PDF and CDF
+    function normalPdf(z) {
+      return Math.exp(-0.5 * z * z) / Math.sqrt(2.0 * Math.PI);
+    }
+
+    function normalCdf(x) {
+      const p = 0.2316419;
+      const b1 = 0.319381530, b2 = -0.356563782, b3 = 1.781477937, b4 = -1.821255978, b5 = 1.330274429;
+      const absX = Math.abs(x);
+      const t = 1.0 / (1.0 + p * absX);
+      const poly = t * (b1 + t * (b2 + t * (b3 + t * (b4 + t * b5))));
+      const comp = normalPdf(absX) * poly;
+      return x >= 0 ? 1.0 - comp : comp;
+    }
+
+    // Exact closed-form CDF of Student-t(nu = 3)
+    function studentT3Cdf(t) {
+      const s = t / Math.sqrt(3.0);
+      return 0.5 + (1.0 / Math.PI) * (Math.atan(s) + s / (1.0 + s * s));
+    }
+
+    // Exact/high-precision inverse CDF F_X^{-1}(u) so Gaussian-copula AR(1)
+    // preserves the exact selected marginal distribution F_X for any rho
+    function quantileFromUniform(u, distKey) {
+      const uc = Math.min(1.0 - 1e-15, Math.max(1e-15, u));
+      if (distKey === "bernoulli") {
+        return uc < 0.5 ? 0.0 : 1.0;
+      }
+      if (distKey === "uniform") {
+        return uc;
+      }
+      if (distKey === "exponential") {
+        return -Math.log(1.0 - uc);
+      }
+      if (distKey === "student_t") {
+        // Bracket and invert exact Student-t(3) CDF
+        let lo = -1.0, hi = 1.0;
+        while (studentT3Cdf(lo) > uc) lo *= 2.0;
+        while (studentT3Cdf(hi) < uc) hi *= 2.0;
+        for (let iter = 0; iter < 42; iter++) {
+          const mid = 0.5 * (lo + hi);
+          if (studentT3Cdf(mid) < uc) lo = mid;
+          else hi = mid;
+        }
+        return 0.5 * (lo + hi);
+      }
+      // Cauchy(0, 1) quantile
+      return Math.tan(Math.PI * (uc - 0.5));
+    }
+
+    // 12-point Gauss-Hermite nodes and normalized weights for E[g(Z)], Z ~ N(0,1)
+    const GH_NODES = [
+      -3.889724897869782, -3.020637025120890, -2.279507080501060, -1.597682635152605,
+      -0.947788391240164, -0.314240376254359,  0.314240376254359,  0.947788391240164,
+       1.597682635152605,  2.279507080501060,  3.020637025120890,  3.889724897869782
+    ];
+    const GH_WEIGHTS = [
+      2.658551684356302e-7, 8.573687043587859e-5, 3.905390584629062e-3, 5.160798561588393e-2,
+      2.604923102641611e-1, 5.701352362624796e-1, 5.701352362624796e-1, 2.604923102641611e-1,
+      5.160798561588393e-2, 3.905390584629062e-3, 8.573687043587859e-5, 2.658551684356302e-7
+    ];
+    const SQRT2 = Math.SQRT2;
+    const INV_SQRTPI = 1.0 / Math.sqrt(Math.PI);
+
+    // Computes autocorrelation series rho_X(h) = Corr(X_0, X_h) for the stationary Gaussian-copula AR(1)
+    let cachedAutocorr = { dist: "", rho: NaN, lags: [], lrFactor: 1.0 };
+
+    function getProcessAutocorrelation(distKey, rho) {
+      if (cachedAutocorr.dist === distKey && Math.abs(cachedAutocorr.rho - rho) < 1e-12) {
+        return cachedAutocorr;
+      }
+      const params = getDistParams(distKey);
+      if (!params.finiteVar) {
+        cachedAutocorr = { dist: distKey, rho, lags: [], lrFactor: NaN };
+        return cachedAutocorr;
+      }
+      if (Math.abs(rho) < 1e-12) {
+        cachedAutocorr = { dist: distKey, rho, lags: [], lrFactor: 1.0 };
+        return cachedAutocorr;
+      }
+
+      const maxLag = 60;
+      const lags = [];
+      let sumPosLags = 0.0;
+
+      // Precompute X(z1) at Gauss-Hermite nodes
+      const x1Vals = GH_NODES.map(t => quantileFromUniform(normalCdf(SQRT2 * t), distKey));
+
+      for (let h = 1; h <= maxLag; h++) {
+        const r = Math.pow(rho, h);
+        if (Math.abs(r) < 1e-6) break;
+        const s = Math.sqrt(Math.max(0.0, 1.0 - r * r));
+        let ex0xh = 0.0;
+        for (let i = 0; i < GH_NODES.length; i++) {
+          const z1 = SQRT2 * GH_NODES[i];
+          const w1 = GH_WEIGHTS[i] * INV_SQRTPI;
+          const x0 = x1Vals[i];
+          for (let j = 0; j < GH_NODES.length; j++) {
+            const z2 = SQRT2 * GH_NODES[j];
+            const w2 = GH_WEIGHTS[j] * INV_SQRTPI;
+            const zh = r * z1 + s * z2;
+            const xh = quantileFromUniform(normalCdf(zh), distKey);
+            ex0xh += w1 * w2 * x0 * xh;
+          }
+        }
+        const corrH = (ex0xh - params.mu * params.mu) / params.sigma2;
+        lags.push(corrH);
+        sumPosLags += corrH;
+      }
+
+      const lrFactor = Math.max(1e-6, 1.0 + 2.0 * sumPosLags);
+      cachedAutocorr = { dist: distKey, rho, lags, lrFactor };
+      return cachedAutocorr;
+    }
+
+    // Exact finite-sample variance of sample mean under stationary Gaussian-copula AR(1)
+    function theoreticalMeanVariance(distKey, n, rho) {
+      const params = getDistParams(distKey);
+      if (!params.finiteVar) return Infinity;
+      if (Math.abs(rho) < 1e-12) return params.sigma2 / n;
+      const { lags } = getProcessAutocorrelation(distKey, rho);
+      let sumCov = 0.0;
+      const limit = Math.min(n - 1, lags.length);
+      for (let h = 1; h <= limit; h++) {
+        sumCov += (1.0 - h / n) * lags[h - 1];
+      }
+      return (params.sigma2 / n) * (1.0 + 2.0 * sumCov);
+    }
+
+    /* -------------------------------------------------------------
+       2. Application State & Monte Carlo Cache
+       ------------------------------------------------------------- */
+    let state = {
+      dist: "exponential",
+      n: 200,
+      M: 400,
+      eps: 0.10,
+      alpha: 0.50,
+      rho: 0.00
+    };
+
+    let simulatedPaths = [];
+    let mseChartInstance = null;
+    let cltChartInstance = null;
+
+    function runMonteCarloSimulation() {
+      const { dist, n, M, rho } = state;
+      const innovScale = Math.sqrt(Math.max(0.0, 1.0 - rho * rho));
+
+      simulatedPaths = new Array(M);
+
+      for (let m = 0; m < M; m++) {
+        const cumMeans = new Float64Array(n);
+        let runningSum = 0.0;
+        let gPrev = sampleStandardNormal();
+
+        for (let k = 0; k < n; k++) {
+          if (k > 0) {
+            if (Math.abs(rho) < 1e-12) {
+              gPrev = sampleStandardNormal();
+            } else {
+              gPrev = rho * gPrev + innovScale * sampleStandardNormal();
+            }
+          }
+          const u = normalCdf(gPrev);
+          const xVal = quantileFromUniform(u, dist);
+          runningSum += xVal;
+          cumMeans[k] = runningSum / (k + 1);
+        }
+        simulatedPaths[m] = cumMeans;
+      }
+    }
+
+    /* -------------------------------------------------------------
+       3. Diagnostics Computation & UI Updates
+       ------------------------------------------------------------- */
+    function updateDiagnostics() {
+      const { dist, n, M, eps, alpha, rho } = state;
+      const params = getDistParams(dist);
+      const center = params.center;
+
+      const varMeanTheo = theoreticalMeanVariance(dist, n, rho);
+      const ac = getProcessAutocorrelation(dist, rho);
+      const lrFactor = params.finiteVar ? ac.lrFactor : NaN;
+      const nEffAsymp = params.finiteVar ? n / lrFactor : NaN;
+
+      document.getElementById("diagEffectiveN").textContent = params.finiteVar
+        ? `n_eff (asymp.) = ${nEffAsymp.toFixed(1)} (LR = ${lrFactor.toFixed(2)})`
+        : `n_eff = undefined (σ² = ∞)`;
+
+      let tailCount = 0;
+      let supExceedCount = 0;
+      let sqErrSum = 0.0;
+      const rescaledVals = new Float64Array(M);
+      const halfIdx = Math.floor(n / 2);
+
+      for (let m = 0; m < M; m++) {
+        const path = simulatedPaths[m];
+        const finalDiff = path[n - 1] - center;
+        if (Math.abs(finalDiff) > eps) tailCount++;
+        sqErrSum += finalDiff * finalDiff;
+        rescaledVals[m] = Math.pow(n, alpha) * finalDiff;
+
+        let exceededTailWindow = false;
+        for (let k = halfIdx; k < n; k++) {
+          if (Math.abs(path[k] - center) > eps) {
+            exceededTailWindow = true;
+            break;
+          }
+        }
+        if (exceededTailWindow) supExceedCount++;
+      }
+
+      const empProbTail = tailCount / M;
+      const empSupTail = supExceedCount / M;
+      const empSqDev = sqErrSum / M;
+
+      let meanY = 0.0;
+      for (let m = 0; m < M; m++) meanY += rescaledVals[m];
+      meanY /= M;
+      let varY = 0.0;
+      for (let m = 0; m < M; m++) {
+        const d = rescaledVals[m] - meanY;
+        varY += d * d;
+      }
+      varY /= Math.max(1, M - 1);
+
+      if (params.finiteVar) {
+        document.getElementById("labelProbTail").innerHTML = `1. In Probability ($\\bar{X}_n \\xrightarrow{P} \\mu$):`;
+        document.getElementById("valProbTail").textContent = `P̂(|X̄ₙ - μ| > ε) = ${empProbTail.toFixed(4)}`;
+        const cheb = Math.min(1.0, varMeanTheo / (eps * eps));
+        document.getElementById("valChebyshev").textContent = `≤ ${cheb.toFixed(4)}`;
+
+        document.getElementById("labelASSup").innerHTML = `2. Finite-Horizon Pathwise Deviation ($\\max_{n/2 \\le k \\le n} |\\bar{X}_k - \\mu| > \\varepsilon$):`;
+        document.getElementById("valASSup").textContent = `${empSupTail.toFixed(4)}`;
+        document.getElementById("sublabelASInside").innerHTML = `Fraction of simulated paths inside $\\mu \\pm \\varepsilon$ over $[n/2, n]$:`;
+        document.getElementById("valASInside").textContent = `${((1.0 - empSupTail) * 100).toFixed(1)}% (${M - supExceedCount}/${M})`;
+
+        document.getElementById("labelMSEEmp").innerHTML = `3. Mean-Square Error ($L^2$: $\\mathbb{E}[(\\bar{X}_n - \\mu)^2]$):`;
+        document.getElementById("valMSEEmp").textContent = empSqDev.toExponential(3);
+        document.getElementById("sublabelMSETheo").innerHTML = `Exact finite-sample $\\text{Var}(\\bar{X}_n)$:`;
+        document.getElementById("valMSETheo").textContent = varMeanTheo.toExponential(3);
+
+        document.getElementById("labelCLTVarEmp").innerHTML = `4. Rescaled Variance $\\widehat{\\text{Var}}(n^\\alpha(\\bar{X}_n - \\mu))$:`;
+        document.getElementById("valCLTVarEmp").textContent = varY.toFixed(4);
+        const theoRescaledVar = Math.pow(n, 2 * alpha) * varMeanTheo;
+        const lrSigma = Math.sqrt(params.sigma2 * lrFactor);
+
+        const sortedY = Array.from(rescaledVals).sort((a, b) => a - b);
+        let ksDist = 0.0;
+        for (let i = 0; i < M; i++) {
+          const z = sortedY[i] / lrSigma;
+          const cdfTheo = normalCdf(z);
+          const empHi = (i + 1) / M;
+          const empLo = i / M;
+          ksDist = Math.max(ksDist, Math.abs(empHi - cdfTheo), Math.abs(cdfTheo - empLo));
+        }
+        document.getElementById("sublabelCLTVarTheo").innerHTML = `Exact $n^{2\\alpha}\\text{Var}(\\bar{X}_n)$ / KS vs $\\mathcal{N}(0, \\sigma_{\\text{LR}}^2)$:`;
+        document.getElementById("valCLTVarTheo").textContent = `${theoRescaledVar.toFixed(4)}  |  KS Dₙ = ${ksDist.toFixed(3)}`;
+      } else {
+        // Explicit labels for Cauchy where theoretical mean and variance are undefined/infinite
+        document.getElementById("labelProbTail").innerHTML = `1. Tail Deviation from Location $x_0 = 0$:`;
+        document.getElementById("valProbTail").textContent = `P̂(|X̄ₙ - x₀| > ε) = ${empProbTail.toFixed(4)}`;
+        document.getElementById("valChebyshev").textContent = `N/A (σ² = ∞)`;
+
+        document.getElementById("labelASSup").innerHTML = `2. Finite-Horizon Pathwise Deviation ($\\max_{n/2 \\le k \\le n} |\\bar{X}_k - x_0| > \\varepsilon$):`;
+        document.getElementById("valASSup").textContent = `${empSupTail.toFixed(4)}`;
+        document.getElementById("sublabelASInside").innerHTML = `Fraction of simulated paths inside $x_0 \\pm \\varepsilon$ over $[n/2, n]$:`;
+        document.getElementById("valASInside").textContent = `${((1.0 - empSupTail) * 100).toFixed(1)}% (${M - supExceedCount}/${M})`;
+
+        document.getElementById("labelMSEEmp").innerHTML = `3. Empirical Squared Deviation from Location $x_0 = 0$:`;
+        document.getElementById("valMSEEmp").textContent = empSqDev.toExponential(3);
+        document.getElementById("sublabelMSETheo").innerHTML = `Theoretical second moment $\\mathbb{E}[\\bar{X}_n^2]$:`;
+        document.getElementById("valMSETheo").textContent = `∞ (Mean & variance undefined)`;
+
+        document.getElementById("labelCLTVarEmp").innerHTML = `4. Sample Spread of $n^\\alpha(\\bar{X}_n - x_0)$:`;
+        document.getElementById("valCLTVarEmp").textContent = `Undefined (σ² = ∞)`;
+        document.getElementById("sublabelCLTVarTheo").innerHTML = `Asymptotic variance status:`;
+        document.getElementById("valCLTVarTheo").textContent = `Sample variance does not converge`;
+      }
+
+      const banner = document.getElementById("regimeBanner");
+      if (!params.finiteVar) {
+        banner.innerHTML = `<strong>Infinite Variance Regime (Cauchy):</strong> Because $\\mathbb{E}[|X|] = \\infty$ and $\\sigma^2 = \\infty$, classical variance additivity fails. For i.i.d. Cauchy variables, $\\bar{X}_n \\sim \\text{Cauchy}(0, 1)$ for every $n$, so $\\bar{X}_n$ does not concentrate around a constant and the Gaussian CLT does not apply (though generalized stable limits exist with different normalizations).`;
+      } else if (Math.abs(alpha - 0.5) < 1e-6) {
+        banner.innerHTML = `<strong>Critical CLT Regime ($\\alpha = 0.50$, factor $\\sqrt{n}$):</strong> Variance scales as $n^{2(0.5)-1}\\sigma_{\\text{LR}}^2 = \\sigma_{\\text{LR}}^2$, stabilizing the asymptotic spread and yielding $Z_n = \\sqrt{n}(\\bar{X}_n - \\mu) \\xrightarrow{d} \\mathcal{N}(0, ${(params.sigma2 * lrFactor).toFixed(3)})$ under the AR(1) CLT conditions.`;
+      } else if (alpha < 0.5) {
+        banner.innerHTML = `<strong>Under-Rescaled Regime ($\\alpha = ${alpha.toFixed(2)} < 0.50$):</strong> With finite variance, $\\text{Var}(n^\\alpha(\\bar{X}_n - \\mu)) = \\mathcal{O}(n^{${(2 * alpha - 1).toFixed(2)}}) \\to 0$. Consequently, $n^{${alpha.toFixed(2)}}(\\bar{X}_n - \\mu) \\xrightarrow{P} 0$, collapsing onto a degenerate point mass at zero.`;
+      } else {
+        banner.innerHTML = `<strong>Over-Rescaled Regime ($\\alpha = ${alpha.toFixed(2)} > 0.50$):</strong> Writing $n^\\alpha(\\bar{X}_n - \\mu) = n^{\\alpha - 1/2} Z_n$ with $Z_n = \\sqrt{n}(\\bar{X}_n - \\mu) \\xrightarrow{d} \\mathcal{N}(0, \\sigma_{\\text{LR}}^2)$, the factor $n^{${(alpha - 0.5).toFixed(2)}} \\to \\infty$ while the Gaussian limit of $Z_n$ is non-degenerate; hence the sequence is not tight and cannot converge in distribution to a real-valued random variable.`;
+      }
+
+      renderMathInContainer(document.getElementById("diagEffectiveN").parentElement.parentElement);
+    }
+
+    /* -------------------------------------------------------------
+       4. Canvas 1: Sample Mean Trajectories (Finite-Horizon Paths)
+       ------------------------------------------------------------- */
+    function drawPathsCanvas() {
+      const canvas = document.getElementById("pathsCanvas");
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const width = rect.width;
+      const height = rect.height;
+      const pad = { top: 22, right: 24, bottom: 30, left: 48 };
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+
+      const { dist, n, M, eps, rho } = state;
+      const params = getDistParams(dist);
+      const center = params.center;
+      const ac = getProcessAutocorrelation(dist, rho);
+      const lrFactor = params.finiteVar ? ac.lrFactor : 1.0;
+
+      const halfSpan = params.finiteVar
+        ? Math.max(eps * 2.4, 2.5 * Math.sqrt(params.sigma2 * lrFactor) / Math.sqrt(Math.max(10, n * 0.15)))
+        : 4.5;
+      const yMin = center - halfSpan;
+      const yMax = center + halfSpan;
+
+      const mapX = (k) => pad.left + ((k - 1) / Math.max(1, n - 1)) * (width - pad.left - pad.right);
+      const mapY = (y) => {
+        const clamped = Math.max(yMin, Math.min(yMax, y));
+        return height - pad.bottom - ((clamped - yMin) / (yMax - yMin)) * (height - pad.top - pad.bottom);
+      };
+
+      // Horizontal grid lines
+      ctx.strokeStyle = "#f3f4f6";
+      ctx.lineWidth = 1;
+      const yTicks = 5;
+      for (let i = 0; i <= yTicks; i++) {
+        const yVal = yMin + (i / yTicks) * (yMax - yMin);
+        const yPos = mapY(yVal);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, yPos);
+        ctx.lineTo(width - pad.right, yPos);
+        ctx.stroke();
+
+        ctx.fillStyle = "#9ca3af";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "right";
+        ctx.fillText(yVal.toFixed(2), pad.left - 6, yPos + 3);
+      }
+
+      // Shaded tolerance band [center - eps, center + eps]
+      const yTopEps = mapY(center + eps);
+      const yBotEps = mapY(center - eps);
+      ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+      ctx.fillRect(pad.left, yTopEps, width - pad.left - pad.right, yBotEps - yTopEps);
+
+      ctx.strokeStyle = "#9ca3af";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, yTopEps);
+      ctx.lineTo(width - pad.right, yTopEps);
+      ctx.moveTo(pad.left, yBotEps);
+      ctx.lineTo(width - pad.right, yBotEps);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw up to 25 trajectories
+      const numShow = Math.min(25, M);
+      for (let m = 0; m < numShow; m++) {
+        const path = simulatedPaths[m];
+        const insideAtEnd = Math.abs(path[n - 1] - center) <= eps;
+        ctx.strokeStyle = insideAtEnd ? "rgba(17, 24, 39, 0.28)" : "rgba(185, 28, 28, 0.55)";
+        ctx.lineWidth = insideAtEnd ? 1.0 : 1.3;
+
+        ctx.beginPath();
+        for (let k = 0; k < n; k++) {
+          const px = mapX(k + 1);
+          const py = mapY(path[k]);
+          if (k === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+
+      // Draw +/- 2 SD(X_bar_k) envelope if finite variance
+      if (params.finiteVar) {
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([5, 4]);
+
+        for (const sign of [1, -1]) {
+          ctx.beginPath();
+          for (let k = 1; k <= n; k++) {
+            const sdK = Math.sqrt(theoreticalMeanVariance(dist, k, rho));
+            const px = mapX(k);
+            const py = mapY(center + sign * 2.0 * sdK);
+            if (k === 1) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
+
+      // Reference horizontal line (mean mu or location x_0)
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, mapY(center));
+      ctx.lineTo(width - pad.right, mapY(center));
+      ctx.stroke();
+
+      // Frame axes
+      ctx.strokeStyle = "#1f2937";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, height - pad.bottom);
+      ctx.lineTo(width - pad.right, height - pad.bottom);
+      ctx.stroke();
+
+      const centerLabel = params.finiteVar ? `μ = ${center.toFixed(2)}` : `location x₀ = ${center.toFixed(2)} (mean undefined)`;
+      document.getElementById("pathsSummaryLabel").textContent =
+        `Showing ${numShow} of ${M} paths around ${centerLabel} (red = outside ±ε at k = ${n})`;
+      document.getElementById("pathsEndLabel").textContent = `k = ${n}`;
+    }
+
+    /* -------------------------------------------------------------
+       5. Chart 2: Log-Log L2 MSE & Tail Probability Decay
+       ------------------------------------------------------------- */
+    function updateMseChart() {
+      const { dist, n, M, eps, rho } = state;
+      const params = getDistParams(dist);
+      const center = params.center;
+
+      const checkpoints = [];
+      const numPts = 14;
+      for (let i = 0; i < numPts; i++) {
+        const k = Math.max(5, Math.round(5 * Math.pow(n / 5, i / (numPts - 1))));
+        if (checkpoints.length === 0 || checkpoints[checkpoints.length - 1] !== k) {
+          checkpoints.push(k);
+        }
+      }
+
+      const empMseData = [];
+      const theoMseData = [];
+      const empTailData = [];
+
+      checkpoints.forEach((k) => {
+        let sqSum = 0.0;
+        let tailCnt = 0;
+        for (let m = 0; m < M; m++) {
+          const diff = simulatedPaths[m][k - 1] - center;
+          sqSum += diff * diff;
+          if (Math.abs(diff) > eps) tailCnt++;
+        }
+        const mseVal = sqSum / M;
+        const tailVal = tailCnt / M;
+
+        empMseData.push({ x: k, y: mseVal > 0 ? mseVal : null });
+        empTailData.push({ x: k, y: tailVal > 0 ? tailVal : null });
+
+        if (params.finiteVar) {
+          const tVar = theoreticalMeanVariance(dist, k, rho);
+          theoMseData.push({ x: k, y: tVar > 0 ? tVar : null });
+        }
+      });
+
+      if (mseChartInstance) {
+        mseChartInstance.destroy();
+      }
+
+      const datasets = [
+        {
+          label: params.finiteVar
+            ? "Empirical L² MSE  E[(X̄_k - μ)²]"
+            : "Empirical Squared Dev. from Location x₀ = 0 (E[X²] = ∞)",
+          data: empMseData,
+          borderColor: "#000000",
+          backgroundColor: "#000000",
+          borderWidth: 2,
+          pointRadius: 3.5,
+          tension: 0.1
+        },
+        {
+          label: params.finiteVar
+            ? "Empirical Tail Prob  P̂(|X̄_k - μ| > ε)"
+            : "Empirical Tail Prob  P̂(|X̄_k - x₀| > ε)",
+          data: empTailData,
+          borderColor: "#9ca3af",
+          backgroundColor: "#9ca3af",
+          borderWidth: 1.8,
+          pointRadius: 3,
+          tension: 0.1
+        }
+      ];
+
+      if (params.finiteVar) {
+        datasets.splice(1, 0, {
+          label: "Exact Var(X̄_k) ~ O(k⁻¹)",
+          data: theoMseData,
+          borderColor: "#4b5563",
+          backgroundColor: "#4b5563",
+          borderDash: [5, 4],
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0
+        });
+      }
+
+      const ctx = document.getElementById("mseChart").getContext("2d");
+      mseChartInstance = new Chart(ctx, {
+        type: "line",
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              type: "logarithmic",
+              grid: { color: "#f3f4f6" },
+              title: {
+                display: true,
+                text: "Sample Size k (Log Scale)",
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              },
+              ticks: {
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 },
+                callback: (val) => Number(val).toString()
+              }
+            },
+            y: {
+              type: "logarithmic",
+              grid: { color: "#f3f4f6" },
+              title: {
+                display: true,
+                text: "L² Error / Tail Probability (Log Scale)",
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              },
+              ticks: {
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 },
+                callback: (val) => Number(val).toExponential(0)
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#111827",
+                font: { family: "monospace", size: 10 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /* -------------------------------------------------------------
+       6. Chart 3: Convergence in Distribution & sqrt(n) Scaling
+       ------------------------------------------------------------- */
+    function updateCltChart() {
+      const { dist, n, M, alpha, rho } = state;
+      const params = getDistParams(dist);
+      const center = params.center;
+      const scaleFactor = Math.pow(n, alpha);
+      const isCltScale = Math.abs(alpha - 0.5) < 1e-6;
+
+      const vals = [];
+      for (let m = 0; m < M; m++) {
+        const y = scaleFactor * (simulatedPaths[m][n - 1] - center);
+        if (Number.isFinite(y)) vals.push(y);
+      }
+
+      const ac = getProcessAutocorrelation(dist, rho);
+      const lrFactor = params.finiteVar ? ac.lrFactor : 1.0;
+      const refStd = params.finiteVar ? Math.sqrt(params.sigma2 * lrFactor) : 2.5;
+      const bound = Math.max(0.6, 3.8 * refStd);
+      const numBins = 27;
+      const binWidth = (2.0 * bound) / numBins;
+
+      const counts = new Array(numBins).fill(0);
+      let inRangeCount = 0;
+      vals.forEach((v) => {
+        if (v >= -bound && v <= bound) {
+          const idx = Math.min(numBins - 1, Math.floor((v + bound) / binWidth));
+          if (idx >= 0) {
+            counts[idx]++;
+            inRangeCount++;
+          }
+        }
+      });
+
+      const binLabels = [];
+      const histData = [];
+      const gaussianData = [];
+      const lrSigma = params.finiteVar ? Math.sqrt(params.sigma2 * lrFactor) : 1.0;
+
+      for (let i = 0; i < numBins; i++) {
+        const binCenter = -bound + (i + 0.5) * binWidth;
+        binLabels.push(binCenter.toFixed(2));
+        const density = vals.length > 0 ? counts[i] / (vals.length * binWidth) : 0;
+        histData.push(density);
+
+        if (params.finiteVar && isCltScale) {
+          const gDens = normalPdf(binCenter / lrSigma) / lrSigma;
+          gaussianData.push(gDens);
+        }
+      }
+
+      if (cltChartInstance) {
+        cltChartInstance.destroy();
+      }
+
+      const centerSym = params.finiteVar ? "μ" : "x₀";
+      const datasets = [
+        {
+          type: "bar",
+          label: `Empirical Density of n^${alpha.toFixed(2)}(X̄_n - ${centerSym})`,
+          data: histData,
+          backgroundColor: "rgba(17, 24, 39, 0.16)",
+          borderColor: "#111827",
+          borderWidth: 1,
+          barPercentage: 0.98,
+          categoryPercentage: 0.98,
+          order: 2
+        }
+      ];
+
+      if (params.finiteVar && isCltScale) {
+        datasets.push({
+          type: "line",
+          label: `Asymptotic CLT Limit N(0, σ_LR² = ${(lrSigma * lrSigma).toFixed(2)})`,
+          data: gaussianData,
+          borderColor: "#000000",
+          backgroundColor: "#000000",
+          borderWidth: 2.2,
+          pointRadius: 0,
+          tension: 0.35,
+          order: 1
+        });
+      }
+
+      const ctx = document.getElementById("cltChart").getContext("2d");
+      cltChartInstance = new Chart(ctx, {
+        data: {
+          labels: binLabels,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              grid: { color: "#f3f4f6" },
+              title: {
+                display: true,
+                text: `Rescaled Value n^${alpha.toFixed(2)}(X̄_n - ${centerSym})`,
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              },
+              ticks: {
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 },
+                maxTicksLimit: 9
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: "#f3f4f6" },
+              title: {
+                display: true,
+                text: "Probability Density",
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              },
+              ticks: {
+                color: "#4b5563",
+                font: { family: "monospace", size: 10 }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#111827",
+                font: { family: "monospace", size: 10 }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                title: (items) => `Bin center ≈ ${items[0].label}`,
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}`
+              }
+            }
+          }
+        }
+      });
+
+      document.getElementById("cltBadge").textContent = isCltScale
+        ? `α = 0.50 → √n(X̄_n - ${centerSym}) [CLT Scale]`
+        : `α = ${alpha.toFixed(2)} → n^${alpha.toFixed(2)}(X̄_n - ${centerSym})`;
+
+      const pctCaptured = vals.length > 0 ? ((inRangeCount / vals.length) * 100).toFixed(1) : "0.0";
+      document.getElementById("cltWindowNote").textContent =
+        `${pctCaptured}% of ${vals.length} replicates fall inside window [${(-bound).toFixed(2)}, +${bound.toFixed(2)}]`;
+    }
+
+    /* -------------------------------------------------------------
+       7. Event Listeners & KaTeX Initialization
+       ------------------------------------------------------------- */
+    function renderMathInContainer(el) {
+      if (window.renderMathInElement && el) {
+        renderMathInElement(el, {
+          delimiters: [
+            { left: "$$", right: "$$", display: true },
+            { left: "$", right: "$", display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    function renderAllMath() {
+      renderMathInContainer(document.body);
+    }
+
+    function refreshViewsOnly() {
+      updateDiagnostics();
+      drawPathsCanvas();
+      updateMseChart();
+      updateCltChart();
+    }
+
+    function fullRecompute() {
+      runMonteCarloSimulation();
+      refreshViewsOnly();
+    }
+
+    document.getElementById("selectDist").addEventListener("change", (e) => {
+      state.dist = e.target.value;
+      fullRecompute();
+    });
+
+    document.getElementById("sliderN").addEventListener("input", (e) => {
+      state.n = parseInt(e.target.value, 10);
+      document.getElementById("labelN").textContent = state.n;
+      fullRecompute();
+    });
+
+    document.getElementById("sliderM").addEventListener("input", (e) => {
+      state.M = parseInt(e.target.value, 10);
+      document.getElementById("labelM").textContent = state.M;
+      fullRecompute();
+    });
+
+    document.getElementById("sliderEps").addEventListener("input", (e) => {
+      state.eps = parseFloat(e.target.value);
+      document.getElementById("labelEps").textContent = state.eps.toFixed(2);
+      refreshViewsOnly();
+    });
+
+    document.getElementById("sliderAlpha").addEventListener("input", (e) => {
+      state.alpha = parseFloat(e.target.value);
+      document.getElementById("labelAlpha").textContent = state.alpha.toFixed(2);
+      document.querySelectorAll(".alpha-btn").forEach((b) => {
+        const isMatch = Math.abs(parseFloat(b.getAttribute("data-alpha")) - state.alpha) < 1e-4;
+        b.classList.toggle("border-black", isMatch);
+        b.classList.toggle("font-bold", isMatch);
+        b.classList.toggle("border-neutral-200", !isMatch);
+      });
+      refreshViewsOnly();
+    });
+
+    document.querySelectorAll(".alpha-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const val = parseFloat(btn.getAttribute("data-alpha"));
+        state.alpha = val;
+        document.getElementById("sliderAlpha").value = val;
+        document.getElementById("labelAlpha").textContent = val.toFixed(2);
+        document.querySelectorAll(".alpha-btn").forEach((b) => {
+          b.classList.remove("border-black", "font-bold");
+          b.classList.add("border-neutral-200");
+        });
+        btn.classList.remove("border-neutral-200");
+        btn.classList.add("border-black", "font-bold");
+        refreshViewsOnly();
+      });
+    });
+
+    document.getElementById("sliderRho").addEventListener("input", (e) => {
+      state.rho = parseFloat(e.target.value);
+      const tag = Math.abs(state.rho) < 1e-6 ? "0.00 (i.i.d.)" : state.rho.toFixed(2);
+      document.getElementById("labelRho").textContent = tag;
+      fullRecompute();
+    });
+
+    document.getElementById("btnResimulate").addEventListener("click", () => {
+      fullRecompute();
+    });
+
+    // Counterexamples toggle
+    const btnCounterL2 = document.getElementById("btnCounterL2");
+    const btnCounterAS = document.getElementById("btnCounterAS");
+    const counterexampleBox = document.getElementById("counterexampleBox");
+
+    btnCounterL2.addEventListener("click", () => {
+      btnCounterL2.classList.add("border-black", "font-bold", "bg-neutral-100");
+      btnCounterL2.classList.remove("border-neutral-200", "bg-neutral-50");
+      btnCounterAS.classList.remove("border-black", "font-bold", "bg-neutral-100");
+      btnCounterAS.classList.add("border-neutral-200", "bg-neutral-50");
+
+      counterexampleBox.innerHTML = `<strong>Typewriter Sequence on $\\Omega = [0,1)$:</strong> For each integer $m \\ge 1$, partition $[0,1)$ into $m$ subintervals $I_{m,j} = \\left[\\frac{j}{m}, \\frac{j+1}{m}\\right)$ for $j = 0, \\dots, m-1$, and enumerate $X_{m,j}(\\omega) = \\mathbf{1}_{I_{m,j}}(\\omega)$ block by block as a single sequence $X_n$. Then $\\mathbb{E}[X_{m,j}^2] = \\frac{1}{m} \\to 0$ as $m \\to \\infty$ (so $X_n \\xrightarrow{L^2} 0$ and $X_n \\xrightarrow{P} 0$). However, every $\\omega \\in [0,1)$ belongs to one interval in each block $m$, so $X_n(\\omega) = 1$ infinitely often and $0$ infinitely often: almost sure convergence fails everywhere.`;
+      renderMathInContainer(counterexampleBox);
+    });
+
+    btnCounterAS.addEventListener("click", () => {
+      btnCounterAS.classList.add("border-black", "font-bold", "bg-neutral-100");
+      btnCounterAS.classList.remove("border-neutral-200", "bg-neutral-50");
+      btnCounterL2.classList.remove("border-black", "font-bold", "bg-neutral-100");
+      btnCounterL2.classList.add("border-neutral-200", "bg-neutral-50");
+
+      counterexampleBox.innerHTML = `<strong>Rare Large Spikes on $\\Omega = [0,1]$:</strong> Define $X_n(\\omega) = n \\cdot \\mathbf{1}_{[0, 1/n^2]}(\\omega)$. Since $\\sum_{n=1}^\\infty P(X_n \\neq 0) = \\sum_{n=1}^\\infty \\frac{1}{n^2} = \\frac{\\pi^2}{6} < \\infty$, the Borel-Cantelli lemma guarantees $P(X_n \\neq 0 \\text{ i.o.}) = 0$, so $X_n \\xrightarrow{\\text{a.s.}} 0$. However, $\\mathbb{E}[X_n^2] = n^2 \\cdot \\frac{1}{n^2} = 1 \\not\\to 0$, so $L^2$ convergence fails.`;
+      renderMathInContainer(counterexampleBox);
+    });
+
+    window.addEventListener("resize", () => {
+      drawPathsCanvas();
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      fullRecompute();
+      renderAllMath();
+    });
+  </script>
+</body>
+</html>
